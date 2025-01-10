@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Bloop
+.bsp
+
+# VS Code
+.vscode/
+
+# IDEA
+.idea
+.idea_modules
+/.worksheet/
+
+# Python
+venv/
+__pycache__/
+
