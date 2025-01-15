@@ -1,3 +1,6 @@
+*.db
+*.csv
+
 # macOS
 .DS_Store
 
