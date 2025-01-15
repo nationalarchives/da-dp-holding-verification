@@ -1,10 +1,10 @@
 import csv
 import hashlib
+import os
 import sqlite3
 import tkinter as tk
 from collections import defaultdict
 from datetime import datetime
-import os
 from pathlib import Path
 from tkinter.filedialog import askdirectory, askopenfilenames
 
@@ -47,9 +47,11 @@ def open_select_window() -> dict[str, tuple[str]]:
 
     select_window.wait_window()
     select_window.update_idletasks()  # Forces the window to close
+
     if item_path == "":
         print("Application closed.")
         quit()  # User has closed the application window
+
     print(f"\nYou've selected: {",\n".join(item_path)}\n")
     result["path"] = item_path
     return result
@@ -148,15 +150,20 @@ def run(path, file_hash_name, all_file_errors, csv_writer, tally):
     return starting_hash_name_for_next_file, all_file_errors, tally
 
 
+def output_file_name(path: Path, date: str) -> str:
+    return f"""INGESTED_FILES_in_{path.name}_{date}.csv"""
+
 def main():
     use_gui = input("Press 'Enter' to use the GUI or type 'c' then 'Enter' for the CLI: ").lower()
 
     file_or_dir: dict[str, tuple[str]] = what_to_look_up() if use_gui == "c" else open_select_window()
     paths = file_or_dir["path"]
+    path_of_an_item_path = Path(paths[0])
+    dir_path: Path = path_of_an_item_path.parent if path_of_an_item_path.is_file() else path_of_an_item_path
 
     is_directory = file_or_dir["is_directory"]
 
-    output_csv_name = f"""files_that_have_been_ingested_{datetime.now().strftime("%d-%m-%Y-%H_%M_%S")}.csv"""
+    output_csv_name = output_file_name(dir_path, datetime.now().strftime("%d-%m-%Y-%H_%M_%S"))
     assumed_hash_algo = "sha256"  # SHA256 because newer files have SHA256 hashes
     all_file_errors: list[dict[str, str]] = []
     tally = defaultdict(int)
@@ -168,7 +175,6 @@ def main():
         files_processed = 0
 
         if is_directory:
-            path = paths[0]
             # if we move to Python 3.12+ on TNA Desktops, please replace the '.rglob("*")' for-loop with this
             # commented out '.walk()' version as the .walk() version seems to pick up more file types:
             # for direct_dir, _, files_in_dir in Path(path).walk():
@@ -177,7 +183,7 @@ def main():
             #             item_path = f"{direct_dir / file_name}"
             #             ... keep the rest of the old for-loop the same
 
-            for item_path in Path(path).rglob("*"):
+            for item_path in dir_path.rglob("*"):
                 if item_path.is_file():
                     files_processed += 1
                     (hash_name, all_file_errors, tally) = run(
