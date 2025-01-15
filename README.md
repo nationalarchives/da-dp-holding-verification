@@ -11,8 +11,8 @@ Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FIL
        1. FILEREF
        2. FIXITYVALUE
        3. ALGORITHMNAME
-   2. Creates a SQLite Table
-   3. Converts each CSV row into a SQLite row
+   2. Creates an SQLite Table
+   3. Converts each CSV row into an SQLite row
    4. Creates an index with the fixity value
 
 ### Things you should know
