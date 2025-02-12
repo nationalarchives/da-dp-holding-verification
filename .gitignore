@@ -1,3 +1,10 @@
+*.db
+*.csv
+*.spec
+
+build/
+dist/
+
 # macOS
 .DS_Store
 
