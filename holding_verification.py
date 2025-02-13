@@ -6,7 +6,11 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from colorama import init as colorama_init
+from colorama import Fore
+from colorama import Style
 
+colorama_init()
 class GetPathFromUser:
     def open_select_window(self) -> dict[str, tuple[str] | bool]:
         import tkinter as tk # Importing tkinter here because GitHub Actions can't import it & it's not needed for tests
@@ -47,8 +51,9 @@ class GetPathFromUser:
             print("Application closed.")
             quit()  # User has closed the application window
 
-        paths_as_string = ",\n".join(item_path)
-        print(f"""\nYou've selected: {paths_as_string}\n""")
+        paths_as_string = ",\n  ".join(item_path)
+        paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
+        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
         result["path"] = item_path
         return result
 
@@ -145,7 +150,10 @@ class HoldingVerification:
         (rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) =\
             self.get_rows_with_hash(path, file_hash_name)
 
-        print(f"File ingested = {checksum_found}: {path}")
+        checksum_found_colour = f"{Fore.GREEN}{checksum_found}{Style.RESET_ALL}" if checksum_found else (
+            f"{Fore.LIGHTRED_EX}{checksum_found}{Style.RESET_ALL}"
+        )
+        print(f"{Fore.YELLOW}File ingested{Style.RESET_ALL} = {checksum_found_colour}: {path}")
         tally[checksum_found] += 1
 
         file_refs = ", ".join((row[0] for row in rows_with_hash))
@@ -169,7 +177,10 @@ class HoldingVerification:
         return csv_file, csv_writer, output_csv_name
 
     def get_file_or_dir_from_user(self, gui_or_cli_prompt=input, file_prompt=GetPathFromUser) -> dict[str, tuple[str] | bool]:
-        use_gui = gui_or_cli_prompt("Press 'Enter' to use the GUI or type 'c' then 'Enter' for the CLI: ").strip().lower()
+        use_gui = gui_or_cli_prompt(
+            f"Press '{Fore.YELLOW}Enter{Style.RESET_ALL}' to use the GUI or type '{Fore.YELLOW}c{Style.RESET_ALL}'"
+            f" then 'Enter' for the CLI: "
+        ).strip().lower()
         prompt = file_prompt()
         return prompt.cli_input() if use_gui == "c" else (prompt.open_select_window())
 
@@ -200,7 +211,7 @@ def main(app: HoldingVerification):
                     assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
 
                 if files_processed % 100 == 0:
-                    print(f"\n{files_processed:,} files processed\n")
+                    print(f"\n{Fore.CYAN}{Style.BRIGHT}{files_processed:,} files processed{Style.RESET_ALL}\n")
 
     else:
         for path in paths:
@@ -212,21 +223,28 @@ def main(app: HoldingVerification):
     app.connection.commit()
     app.connection.close()
 
-    print(f"\nCompleted.\n\n")
-    print(f"{files_processed:,} files were processed:")
+    print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
+    print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} files were processed:")
+    preserved =  tally.get(True)
+    preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
     print(f"""
-    Files in Preservica/DRI: {tally.get(True):}
-    Files not in Preservica/DRI: {tally.get(False):}
+    Files in Preservica/DRI: {preserved_colour:}
+    Files not in Preservica/DRI: {Fore.RED}{tally.get(False):}{Style.RESET_ALL}
     """)
 
-    print(f"The full results can be found in a file called '{output_csv_name}'.\n")
+    print(f"The full results can be found in a file called '{Fore.YELLOW}{output_csv_name}{Style.RESET_ALL}'.\n")
     if all_file_errors:
         print("These files encountered errors when trying to generate checksums:\n")
         for file_error in all_file_errors:
-            print(file_error)
+            print(f"{Fore.RED}{file_error}{Style.RESET_ALL}")
 
 
 if __name__ == "__main__":
+    from sys import platform
+# Macs run the script from root dir, so this changes it to the location of theexecutable
+    if platform == "darwin":
+        import os
+        os.chdir(Path(__file__).parent.parent)
     db_function = sqlite3.connect("checksums_of_files_in_dri.db")
     app = HoldingVerification(db_function)
     main(app)
