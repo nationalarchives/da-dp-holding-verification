@@ -1,0 +1,30 @@
+name: DR2 Tag and pre deploy
+on:
+  push:
+    branches:
+      - main
+permissions:
+  id-token: write
+  contents: write
+jobs:
+  generate-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Upgrade pip & create exe file
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pyinstaller --icon=".\folder_smile.ico" holding_verification.py
+          mkdir zipped_executable
+          Compress-Archive -Path dist/* -Destination zipped_executable/da-holding-verification-windows-64.zip
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: da-holding-verification-windows-64
+          path: zipped_executable/**
+          if-no-files-found: error
