@@ -36,9 +36,9 @@ class GetPathFromUser:
         select_window.wait_window()
         select_window.update_idletasks()  # Forces the window to close
 
-        if item_path == "":
+        if len(item_path) == 0:
             print("Application closed.")
-            quit()  # User has closed the application window
+            exit()  # User has closed the application window
 
         paths_as_string = ",\n".join(item_path)
         print(f"""\nYou've selected: {paths_as_string}\n""")
