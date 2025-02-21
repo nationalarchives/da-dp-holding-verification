@@ -392,7 +392,7 @@ class TestHoldingVerification(unittest.TestCase):
             file_prompt.open_select_window = Mock(return_value={"'open_select_window' should not be called": "wrong"})
             paths = HoldingVerification(Mock()).get_file_or_dir_from_user(gui_choice_input, file_prompt)
             (gui_choice_input_args, _) = gui_choice_input.call_args
-            self.assertEqual(("Press 'Enter' to use the GUI or type 'c' then 'Enter' for the CLI: ",), gui_choice_input_args)
+            self.assertEqual(("Press '\x1b[33mEnter\x1b[0m' to use the GUI or type '\x1b[33mc\x1b[0m' then 'Enter' for the CLI: ",), gui_choice_input_args)
             self.assertEqual({"path": (self.test_file,), "is_directory": False}, paths)
 
     def test_get_file_or_dir_from_user_should_call_gui_if_user_input_is_not_a_c(self):
@@ -405,7 +405,8 @@ class TestHoldingVerification(unittest.TestCase):
             file_prompt.cli_input = Mock(return_value={"'cli_input' should not be called": "wrong"})
             paths = HoldingVerification(Mock()).get_file_or_dir_from_user(gui_choice_input, file_prompt)
             (gui_choice_input_args, _) = gui_choice_input.call_args
-            self.assertEqual(("Press 'Enter' to use the GUI or type 'c' then 'Enter' for the CLI: ",), gui_choice_input_args)
+            print(str(gui_choice_input_args))
+            self.assertEqual(("Press '\x1b[33mEnter\x1b[0m' to use the GUI or type '\x1b[33mc\x1b[0m' then 'Enter' for the CLI: ",), gui_choice_input_args)
             self.assertEqual({"path": (self.test_file,), "is_directory": False}, paths)
 
     def test_main_should_call_expected_methods_once_if_1_file_has_been_passed_in(self):
