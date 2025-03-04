@@ -40,7 +40,7 @@ Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FIL
 (called by 'holding_verification.py') Allows you to select 1 or more files or a folder, via GUI or (Command Line
 Interface) CLI.
 
-1. It will ask the use if they would like to use the GUI or CLI to select the file(s)/folder
+1. It will ask the user if they would like to use the GUI or CLI to select the file(s)/folder
 2. If the user:
    1. Presses the "Enter" button, they will choose the GUI, a GUI appears with an option to:
       1. Select file(s) - button
@@ -49,8 +49,8 @@ Interface) CLI.
       2. Select folder - button
          1. Clicking the button will open a dialog box where you can select a folder
          2. Once selected, the window will close
-   2. Types `c` and the presses "Enter", they will choose the CLI, which will then give an option to:
-      1. Type `f` for a single file (only one file supported at the moment) or `d` for a single directory?
+   2. Types `c` and then presses "Enter", the CLI option will be selected, which will then give an option to:
+      1. Type `f` for a single file (only one file supported at the moment) or `d` for a single directory
       2. Once the user types either `f` or `d` and presses "Enter", they will be asked to add the full path to the
          file/folder
 3. What you've selected will appear in the command line window and the processing of the file(s) will start
