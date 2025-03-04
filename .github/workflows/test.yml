@@ -1,4 +1,4 @@
-name: DR2 Run App Tests
+name: DA DP Run Holding Verification App Tests
 on:
   push:
     branches-ignore:
