@@ -62,5 +62,6 @@ The tests are located here `test/test_holding_verification.py`. In order to run 
 as it might default to the `test` folder.
 
 ### Things you should know
-1. Just because a checksum was matched, doesn't necessarily mean the file that is ingested had the same name
-2. Files that encountered errors are printed at the end but will look normal in the CSV
+1. You'd need to run this with Python 3.12 or higher
+2. Just because a checksum was matched, doesn't necessarily mean the file that is ingested had the same name
+3. Files that encountered errors are printed at the end but will look normal in the CSV
