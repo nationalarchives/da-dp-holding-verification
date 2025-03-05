@@ -1,4 +1,6 @@
 from pathlib import Path
+from colorama import Fore
+from colorama import Style
 
 class GetPathFromUser:
     def open_select_window(self) -> dict[str, tuple[str] | bool]:
@@ -37,11 +39,12 @@ class GetPathFromUser:
         select_window.update_idletasks()  # Forces the window to close
 
         if len(item_path) == 0:
-            print("Application closed.")
+            print(f"{Fore.RED}Application closed.{Style.RESET_ALL}")
             exit()  # User has closed the application window
 
-        paths_as_string = ",\n".join(item_path)
-        print(f"""\nYou've selected: {paths_as_string}\n""")
+        paths_as_string = ",\n  ".join(item_path)
+        paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
+        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
         result["path"] = item_path
         return result
 
