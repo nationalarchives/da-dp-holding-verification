@@ -1,0 +1,32 @@
+name: DA DP Tag and pre deploy Holding Verification App
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: write
+jobs:
+  generate-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - id: next-tag
+        uses: nationalarchives/dr2-github-actions/.github/actions/get-next-version@main
+        with:
+          repo-name: da-dp-holding-verification
+      - name: Upgrade pip & create exe file
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pyinstaller --icon=".\folder_smile.ico" holding_verification.py
+          mkdir zipped_executable
+          Compress-Archive -Path dist/* -Destination zipped_executable/da-holding-verification-windows-64.zip
+          gh release create --generate-notes ${{ steps.next-tag.outputs.next-version }} zipped_executable/da-holding-verification-windows-64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
