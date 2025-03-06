@@ -23,8 +23,8 @@ holding_verification.py with the DB or generate a new DB with the headings menti
 
 Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FILE_WITH_CHECKSUMS:
 
-   1. Fetches the file(s) that it's been pointed to
-   2. For each file, generates a checksum hash (fixity value) on the content
+   1. Allows you to select 1 or more files or a folder, via GUI or CLI
+   2. Opens each file and generates a checksum hash (fixity value) on the content
    3. Looks for that checksum hash in the DB
       1. If not found, it will generate a checksum hash using another algorithm, if not found, it will generate a checksum hash using another algorithm 
          1. At most, it will generate 3 hashes: SHA256, SHA1 and MD5 and then give up
@@ -61,7 +61,7 @@ The tests are located here `test/test_holding_verification.py`. In order to run 
 `python -m unittest` from the root folder. If running from PyCharm, you might have to change the "Working Directory" to the root folder,
 as it might default to the `test` folder.
 
-### Things you should know
-1. You'd need to run this with Python 3.12 or higher
+## Things you should know
+1. You'd need to run this project with Python 3.12 or higher
 2. Just because a checksum was matched, doesn't necessarily mean the file that is ingested had the same name
 3. Files that encountered errors are printed at the end but will look normal in the CSV

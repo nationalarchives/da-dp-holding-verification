@@ -151,6 +151,11 @@ def main(app: HoldingVerification):
 
 
 if __name__ == "__main__":
+    from sys import platform
+# Macs run the script from root dir, so this changes it to the location of the executable
+    if platform == "darwin":
+        import os
+        os.chdir(Path(__file__).parent.parent)
     db_function = sqlite3.connect("checksums_of_files_in_dri.db")
     app = HoldingVerification(db_function)
     main(app)
