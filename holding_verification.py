@@ -166,7 +166,7 @@ def main(app: HoldingVerification):
 
 if __name__ == "__main__":
     from sys import platform
-# Macs run the script from root dir, so this changes it to the location of the executable
+# On Macs, the exe runs the script in the '_internal' dir so this changes it to the location of the executable
     if platform == "darwin":
         import os
         os.chdir(Path(__file__).parent.parent)
@@ -175,7 +175,8 @@ if __name__ == "__main__":
     main(app)
 
     while True:
-        user_choice = input("Press 'q' and 'Enter' to quit: ").lower()
+        user_choice = input(f"Press '{Fore.YELLOW}q{Style.RESET_ALL}' and '{Fore.YELLOW}Enter{Style.RESET_ALL}' to "
+                            f"quit: ").lower()
         if user_choice == "q":
             break
         else:

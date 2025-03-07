@@ -49,6 +49,13 @@ Interface) CLI.
       2. Select folder - button
          1. Clicking the button will open a dialog box where you can select a folder
          2. Once selected, the window will close
+      3. Drag and Drop either file(s) or a folder (but not both types) - empty box
+          1. Drag and drop 1 or more files or a single folder from your file explorer onto the box area
+          2. What you've dropped should be displayed on the box
+          3. Note: There is no ability to remove particular items; if you would like to remove the items dropped, you'd
+             have to drop new items or close the app
+          4. Once you're happy with your selection, press the "confirm" button to confirm that these files/folder should be
+             validated
    2. Types `c` and then presses "Enter", the CLI option will be selected, which will then give an option to:
       1. Type `f` for a single file (only one file supported at the moment) or `d` for a single directory
       2. Once the user types either `f` or `d` and presses "Enter", they will be asked to add the full path to the
