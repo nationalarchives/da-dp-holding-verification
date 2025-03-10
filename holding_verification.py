@@ -5,6 +5,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+import os
 
 from colorama import init as colorama_init
 from colorama import Fore
@@ -13,6 +14,19 @@ from colorama import Style
 from get_path_from_user import GetPathFromUser
 
 colorama_init()
+
+
+def check_db_exists(db_file_name, confirm_db_added_prompt=input):
+    db_file_does_not_exist = True
+    while db_file_does_not_exist:
+        if Path(db_file_name).exists():
+            break
+        else:
+            response = confirm_db_added_prompt(
+                f"'{db_file_name}' is missing from the directory '{os.getcwd()}'; add it a press 'Enter' to continue"
+            )
+            if isinstance(response, bool): # In tests, confirm_db_added_prompt returns Boolean in order to break loop
+                db_file_does_not_exist = response
 
 
 class HoldingVerification:
@@ -168,9 +182,12 @@ if __name__ == "__main__":
     from sys import platform
 # On Macs, the exe runs the script in the '_internal' dir so this changes it to the location of the executable
     if platform == "darwin":
-        import os
         os.chdir(Path(__file__).parent.parent)
-    db_function = sqlite3.connect("checksums_of_files_in_dri.db")
+
+    db_file_name = "checksums_of_files_in_dri.db"
+    check_db_exists(db_file_name)
+
+    db_function = sqlite3.connect(db_file_name)
     app = HoldingVerification(db_function)
     main(app)
 
