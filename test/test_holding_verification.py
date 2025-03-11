@@ -507,7 +507,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, mock_holding_verification.run_args.call_count)
         actual_and_expected_args = zip(
             mock_holding_verification.run_args.call_args_list,
-            ((self.empty_test_file, {}), (self.test_file, {True: 1}))
+            ((self.empty_test_file, {}), (self.test_file, {True: 1}), (self.empty_test_db, {True: 1}))
         )
 
         for (run_args, _), (expected_file_path, expected_tally) in actual_and_expected_args:
