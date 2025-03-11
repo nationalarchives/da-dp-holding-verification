@@ -163,7 +163,8 @@ def main(app: HoldingVerification):
     app.connection.close()
 
     print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
-    print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} files were processed:")
+    file_or_files = "file was" if files_processed == 1 else "files were"
+    print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
     preserved =  tally.get(True)
     preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
     print(f"""
