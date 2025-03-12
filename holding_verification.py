@@ -5,6 +5,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+import os
 
 from colorama import init as colorama_init
 from colorama import Fore
@@ -13,6 +14,19 @@ from colorama import Style
 from get_path_from_user import GetPathFromUser
 
 colorama_init()
+
+
+def check_db_exists(db_file_name, confirm_db_added_prompt=input):
+    db_file_does_not_exist = True
+    while db_file_does_not_exist:
+        if Path(db_file_name).exists():
+            break
+        else:
+            response = confirm_db_added_prompt(
+                f"'{db_file_name}' is missing from the directory '{os.getcwd()}'; add it a press 'Enter' to continue"
+            )
+            if isinstance(response, bool): # In tests, confirm_db_added_prompt returns Boolean in order to break loop
+                db_file_does_not_exist = response
 
 
 class HoldingVerification:
@@ -149,7 +163,8 @@ def main(app: HoldingVerification):
     app.connection.close()
 
     print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
-    print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} files were processed:")
+    file_or_files = "file was" if files_processed == 1 else "files were"
+    print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
     preserved =  tally.get(True)
     preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
     print(f"""
@@ -166,16 +181,20 @@ def main(app: HoldingVerification):
 
 if __name__ == "__main__":
     from sys import platform
-# Macs run the script from root dir, so this changes it to the location of the executable
+# On Macs, the exe runs the script in the '_internal' dir so this changes it to the location of the executable
     if platform == "darwin":
-        import os
         os.chdir(Path(__file__).parent.parent)
-    db_function = sqlite3.connect("checksums_of_files_in_dri.db")
+
+    db_file_name = "checksums_of_files_in_dri.db"
+    check_db_exists(db_file_name)
+
+    db_function = sqlite3.connect(db_file_name)
     app = HoldingVerification(db_function)
     main(app)
 
     while True:
-        user_choice = input("Press 'q' and 'Enter' to quit: ").lower()
+        user_choice = input(f"Press '{Fore.YELLOW}q{Style.RESET_ALL}' and '{Fore.YELLOW}Enter{Style.RESET_ALL}' to "
+                            f"quit: ").lower()
         if user_choice == "q":
             break
         else:

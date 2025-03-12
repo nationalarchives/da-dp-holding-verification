@@ -5,13 +5,14 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock
 
-from holding_verification import HoldingVerification, main, GetPathFromUser
+from holding_verification import HoldingVerification, main, GetPathFromUser, check_db_exists
 
 
 class TestHoldingVerification(unittest.TestCase):
     def setUp(self):
         self.test_file = os.path.normpath("test/test_files/testFile.txt")
         self.empty_test_file = os.path.normpath("test/test_files/emptyTestFile.txt")
+        self.empty_test_db = os.path.normpath("test/test_files/test_checksums_of_files_in_dri.testdb")
         self.test_files_folder = os.path.normpath("test/test_files")
 
     class HVWithMockedChecksumMethods(HoldingVerification):
@@ -408,33 +409,29 @@ class TestHoldingVerification(unittest.TestCase):
             self.assertEqual(("Press '\x1b[33mEnter\x1b[0m' to use the GUI or type '\x1b[33mc\x1b[0m' then 'Enter' for the CLI: ",), gui_choice_input_args)
             self.assertEqual({"path": (self.test_file,), "is_directory": False}, paths)
 
-    def test_main_should_call_expected_methods_once_if_1_file_has_been_passed_in(self):
-        db_connection = Mock()
-        db_connection.commit = Mock()
-        db_connection.close = Mock()
-        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
-            {"path": (self.test_file,), "is_directory": False}, db_connection
+    def test_check_db_exists_should_prompt_the_user_if_db_does_not_exist(self):
+        db_file_name = "non_existent_db_file_name"
+        confirm_prompt = Mock()
+        confirm_prompt.side_effect = ["", "", False]
+        check_db_exists(db_file_name, confirm_prompt)
+
+        confirm_prompt_input_args = confirm_prompt.call_args_list
+        self.assertEqual(3, confirm_prompt.call_count)
+        self.assertEqual(
+            True,
+            all("'non_existent_db_file_name' is missing from the directory '" in input_arg[0][0] for input_arg in
+                confirm_prompt_input_args
+            )
         )
-        main(mock_holding_verification)
-        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
-        (run_args, _) = mock_holding_verification.run_args.call_args
-        first_3_run_args = run_args[0 : 3]
-        csv_writer_run_args = run_args[3]
-        tally = run_args[4]
 
-        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count)
-        self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
-        self.assertEqual(True, path_arg.match(self.test_files_folder))
-        self.assertEqual("19-01-2038-03_14_08", date_arg)
-        self.assertEqual(1, mock_holding_verification.run_args.call_count)
-        self.assertEqual((self.test_file, "sha256", []), first_3_run_args)
-        self.assertEqual("csv_writer", csv_writer_run_args.object_type)
-        self.assertEqual({}, tally)
-        self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
-        self.assertEqual(1, db_connection.cursor.call_count)
-        self.assertEqual(1, db_connection.close.call_count)
+    def test_check_db_exists_should_not_prompt_the_user_if_db_does_exist(self):
+        confirm_prompt = Mock()
+        check_db_exists(self.empty_test_db, confirm_prompt)
 
-    def test_main_should_call_2_methods_once_and_run_method_twice_if_2_files_have_been_passed_in(self):
+        confirm_prompt_input_args = confirm_prompt.call_args_list
+        self.assertEqual(0, confirm_prompt.call_count)
+
+    def test_main_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(self):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
@@ -443,18 +440,19 @@ class TestHoldingVerification(unittest.TestCase):
             db_connection
         )
         main(mock_holding_verification)
-        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
 
-        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count)
+        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count) # no args to check
+
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
+        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
         self.assertEqual(True, path_arg.match(self.test_files_folder))
         self.assertEqual("19-01-2038-03_14_08", date_arg)
+
         self.assertEqual(2, mock_holding_verification.run_args.call_count)
         actual_and_expected_args = zip(
             mock_holding_verification.run_args.call_args_list,
             ((self.test_file, {}), (self.empty_test_file, {True: 1}))
         )
-
         for (run_args, _), (expected_file_path, expected_tally) in actual_and_expected_args:
             first_3_run_args = run_args[0 : 3]
             csv_writer_run_args = run_args[3]
@@ -463,11 +461,12 @@ class TestHoldingVerification(unittest.TestCase):
             self.assertEqual((expected_file_path, "sha256", []), first_3_run_args)
             self.assertEqual("csv_writer", csv_writer_run_args.object_type)
             self.assertEqual(expected_tally, tally)
+
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
         self.assertEqual(1, db_connection.close.call_count)
 
-    def test_main_should_call_2_methods_once_and_run_method_twice_if_a_folder_with_2_files_have_been_passed_in(self):
+    def test_main_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(self):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
@@ -475,18 +474,19 @@ class TestHoldingVerification(unittest.TestCase):
             {"path": (self.test_files_folder,), "is_directory": True}, db_connection
         )
         main(mock_holding_verification)
-        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
 
-        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count)
+        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count) # no args to check
+
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
+        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
         self.assertEqual(True, Path(path_arg).match(self.test_files_folder))
         self.assertEqual("19-01-2038-03_14_08", date_arg)
-        self.assertEqual(2, mock_holding_verification.run_args.call_count)
-        actual_and_expected_args = zip(
-            mock_holding_verification.run_args.call_args_list,
-            ((self.empty_test_file, {}), (self.test_file, {True: 1}))
-        )
 
+        self.assertEqual(3, mock_holding_verification.run_args.call_count)
+        actual_and_expected_args = zip(
+            sorted(mock_holding_verification.run_args.call_args_list),
+            ((self.empty_test_file, {}), (self.test_file, {True: 1}), (self.empty_test_db, {True: 1}))
+        )
         for (run_args, _), (expected_file_path, expected_tally) in actual_and_expected_args:
             path_arg = run_args[0]
             hash_name_and_all_errors = run_args[1 : 3]
@@ -496,6 +496,7 @@ class TestHoldingVerification(unittest.TestCase):
             self.assertEqual(("sha256", []), hash_name_and_all_errors)
             self.assertEqual("csv_writer", csv_writer_run_args.object_type)
             self.assertEqual(expected_tally, tally)
+
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
         self.assertEqual(1, db_connection.close.call_count)
