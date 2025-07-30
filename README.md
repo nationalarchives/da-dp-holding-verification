@@ -1,4 +1,4 @@
-# DA DP Holding Verification
+# DA DP Holding Verification (AKA Checkmate)
 
 This is a Python app designed for finding out whether files on a drive have already been ingested.
 
@@ -18,15 +18,27 @@ This app consists of 3 files:
 
 ### 1. convert_checksum_csv_to_sqlite.py
 
-Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FILE_WITH_CHECKSUMS:
+A "config.ini" file can be found at the root of this project that contains the environment variables that this script
+needs:
 
-   1. Takes a CSV with the headings:
-       1. FILEREF
-       2. FIXITYVALUE
-       3. ALGORITHMNAME
-   2. Creates an SQLite Table
-   3. Converts each CSV row into an SQLite row
-   4. Creates an index with the fixity value
+1. CHECKSUM_DB_NAME
+2. CHECKSUM_TABLE_NAME
+3. CSV_FILEREF_COLUMN
+4. CSV_FIXITYVALUE_COLUMN
+5. CSV_ALGORITHMNAME_COLUMN
+
+These all have defaults that can be modified as needed.
+
+#### Running the script
+
+   1. In order to run the script, run `python convert_checksum_csv_to_sqlite.py` or `python3 
+   convert_checksum_csv_to_sqlite.py`
+   2. It will request the full path to theCSV file that is to be converted to a DB
+      - the CSV must contain the headings defined in the config.ini file
+   3. Creates an SQLite Table
+   4. Converts each CSV row into an SQLite row
+   5. Creates an index with the fixity value
+   6. Outputs the `.db` file to the root of this project
 
 #### Things you should know
 This script is only necessary if you only have the CSV version of the DB, otherwise, skip to the 

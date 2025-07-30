@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import sqlite3
+import configparser
 
 from collections import defaultdict
 from datetime import datetime
@@ -15,6 +16,8 @@ from get_path_from_user import GetPathFromUser
 
 colorama_init()
 
+config = configparser.ConfigParser()
+config.read("config.ini")
 
 def check_db_exists(db_file_name, confirm_db_added_prompt=input):
     db_file_does_not_exist = True
@@ -35,7 +38,7 @@ class HoldingVerification:
         self.cursor = self.connection.cursor()
 
     BUFFER_SIZE = 1_000_000
-    table_name = "files_in_dri"
+    table_name = config["DEFAULT"]["CHECKSUM_TABLE_NAME"]
     select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
 
 
@@ -185,7 +188,7 @@ if __name__ == "__main__":
     if platform == "darwin":
         os.chdir(Path(__file__).parent.parent)
 
-    db_file_name = "checksums_of_files_in_dri.db"
+    db_file_name = config["DEFAULT"]["CHECKSUM_DB_NAME"]
     check_db_exists(db_file_name)
 
     db_function = sqlite3.connect(db_file_name)
