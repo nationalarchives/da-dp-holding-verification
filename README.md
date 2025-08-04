@@ -33,9 +33,9 @@ These all have defaults that can be modified as needed.
 
    1. In order to run the script, run `python convert_checksum_csv_to_sqlite.py` or `python3 
    convert_checksum_csv_to_sqlite.py`
-   2. It will request the full path to theCSV file that is to be converted to a DB
+   2. It will request the full path to the CSV file that is to be converted to a DB
       - the CSV must contain the headings defined in the config.ini file
-   3. Creates an SQLite Table
+   3. Creates an SQLite table
    4. Converts each CSV row into an SQLite row
    5. Creates an index with the fixity value
    6. Outputs the `.db` file to the root of this project
