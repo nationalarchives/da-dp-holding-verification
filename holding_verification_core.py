@@ -40,7 +40,7 @@ class ResultSummary:
     output_csv_name: str
 
 
-class HoldingVerification:
+class HoldingVerificationCore:
     def __init__(self, connection):
         self.connection = connection
         self.cursor = self.connection.cursor()
@@ -124,54 +124,40 @@ class HoldingVerification:
         return csv_file, csv_writer, output_csv_name
 
 
-def main(app: HoldingVerification, file_or_dir: dict[str, tuple[str] | bool]):
-    is_directory = file_or_dir["is_directory"]
-    paths = file_or_dir["path"]
-    path_of_an_item_path = Path(paths[0])  # assuming that files are in the same folder for now
-    dir_path: Path = path_of_an_item_path.parent if path_of_an_item_path.is_file() else path_of_an_item_path
+    def start(self, file_or_dir) -> ResultSummary:
+        is_directory = file_or_dir["is_directory"]
+        paths = file_or_dir["path"]
+        path_of_an_item_path = Path(paths[0])  # assuming that files are in the same folder for now
+        dir_path: Path = path_of_an_item_path.parent if path_of_an_item_path.is_file() else path_of_an_item_path
 
-    assumed_hash_algo = "sha256"  # SHA256 because newer files have SHA256 hashes
-    all_file_errors: list[dict[str, str]] = []
-    tally: dict[bool, int] = defaultdict(int)
-    files_processed = 0
+        assumed_hash_algo = "sha256"  # SHA256 because newer files have SHA256 hashes
+        all_file_errors: list[dict[str, str]] = []
+        tally: dict[bool, int] = defaultdict(int)
+        files_processed = 0
 
-    csv_file, csv_writer, output_csv_name = app.get_csv_output_writer_and_file_name(dir_path)
+        csv_file, csv_writer, output_csv_name = self.get_csv_output_writer_and_file_name(dir_path)
 
-    if is_directory:
-        for direct_dir, _, files_in_dir in Path(dir_path).walk():
-            if files_in_dir:  # for each directory, there could be just directories inside
-                for file_name in files_in_dir:
-                    item_path = f"{direct_dir / file_name}"
-                    files_processed += 1
-                    (hash_name, all_file_errors, tally) = app.run(
-                        str(item_path), assumed_hash_algo, all_file_errors, csv_writer, tally
-                    )
-                    assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
+        if is_directory:
+            for direct_dir, _, files_in_dir in Path(dir_path).walk():
+                if files_in_dir:  # for each directory, there could be just directories inside
+                    for file_name in files_in_dir:
+                        item_path = f"{direct_dir / file_name}"
+                        files_processed += 1
+                        (hash_name, all_file_errors, tally) = self.run(
+                            str(item_path), assumed_hash_algo, all_file_errors, csv_writer, tally
+                        )
+                        assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
 
-                if files_processed % 100 == 0:
-                    print(f"\n{Fore.CYAN}{Style.BRIGHT}{files_processed:,} files processed{Style.RESET_ALL}\n")
+                    if files_processed % 100 == 0:
+                        print(f"\n{Fore.CYAN}{Style.BRIGHT}{files_processed:,} files processed{Style.RESET_ALL}\n")
 
-    else:
-        for path in paths:
-            files_processed += 1
-            (hash_name, all_file_errors, tally) = app.run(path, assumed_hash_algo, all_file_errors, csv_writer, tally)
-            assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
+        else:
+            for path in paths:
+                files_processed += 1
+                (hash_name, all_file_errors, tally) = self.run(path, assumed_hash_algo, all_file_errors, csv_writer, tally)
+                assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
 
-    csv_file.close()
-    app.connection.commit()
+        csv_file.close()
+        self.connection.commit()
 
-    print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
-    file_or_files = "file was" if files_processed == 1 else "files were"
-    print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
-    preserved = tally.get(True)
-    preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
-    print(f"""
-    Files in Preservica/DRI: {preserved_colour:}
-    Files not in Preservica/DRI: {Fore.RED}{tally.get(False):}{Style.RESET_ALL}
-    """)
-
-    print(f"The full results can be found in a file called '{Fore.YELLOW}{output_csv_name}{Style.RESET_ALL}'.\n")
-    if all_file_errors:
-        print("These files encountered errors when trying to generate checksums:\n")
-        for file_error in all_file_errors:
-            print(f"{Fore.RED}{file_error}{Style.RESET_ALL}")
+        return ResultSummary(files_processed, tally, all_file_errors, output_csv_name)

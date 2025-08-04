@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock
 
-from holding_verification import HoldingVerification, main, check_db_exists
+from holding_verification_core import HoldingVerificationCore, check_db_exists
 
 
 class TestHoldingVerification(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.empty_test_db = os.path.normpath("test/test_files/test_checksums_of_files_in_dri.testdb")
         self.test_files_folder = os.path.normpath("test/test_files")
 
-    class HVWithMockedChecksumMethods(HoldingVerification):
+    class HVWithMockedChecksumMethods(HoldingVerificationCore):
         def __init__(self, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
                      checksum_in_db_return_vals: tuple[list[list[str]]] = (),
                      checksum_for_file_return_vals: tuple[str] = ("sha256Checksum123", "md5Checksum234",
@@ -36,8 +36,9 @@ class TestHoldingVerification(unittest.TestCase):
             self.checksum_in_db_calls += 1
             return next(self.checksum_in_db)
 
-    class HVWithMockedRowsWithHash(HoldingVerification):
-        def __init__(self, rows_with_hash: list[list[str]], checksum_found: bool, errors_generating_checksum: dict[str, str],
+    class HVWithMockedRowsWithHash(HoldingVerificationCore):
+        def __init__(self, rows_with_hash: list[list[str]], checksum_found: bool,
+                     errors_generating_checksum: dict[str, str],
                      next_hash_name: str):
             super().__init__(Mock())
             self.rows_with_hash = rows_with_hash
@@ -48,7 +49,7 @@ class TestHoldingVerification(unittest.TestCase):
         def get_rows_with_hash(self, file_path: str, hash_name: str):
             return self.rows_with_hash, self.checksum_found, self.errors_generating_checksum, self.next_hash_name
 
-    class HVWithMockedUserPromptCsvAndRunMethods(HoldingVerification):
+    class HVWithMockedUserPromptCsvAndRunMethods(HoldingVerificationCore):
         def __init__(self, file_or_dir: dict[str, tuple[str] | bool], db_connection):
             super().__init__(db_connection)
             self.file_or_dir = file_or_dir
@@ -59,7 +60,9 @@ class TestHoldingVerification(unittest.TestCase):
             self.get_csv_output_writer_and_file_name_args = Mock()
             self.run_args = Mock()
 
-        def get_csv_output_writer_and_file_name(self, dir_path: Path, date: str=datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")):
+        def get_csv_output_writer_and_file_name(self, dir_path: Path,
+                                                date: str = datetime.fromtimestamp(2147483648).strftime(
+                                                    "%d-%m-%Y-%H_%M_%S")):
             self.get_csv_output_writer_and_file_name_args(dir_path, date)
             return self.csv_file, self.csv_writer, self.output_csv_name
 
@@ -67,11 +70,11 @@ class TestHoldingVerification(unittest.TestCase):
             self.run_args(path, file_hash_name, all_file_errors, csv_writer, tally)
             return "sha256", [], {True: 1}
 
-
     def test_get_csv_output_writer_and_file_name_should_return_expected_file_object_and_writer_and_name(self):
         path = Path("test_files")
         mock_db_connection = Mock()
-        csv_file, csv_writer, output_csv_name = HoldingVerification(mock_db_connection).get_csv_output_writer_and_file_name(
+        csv_file, csv_writer, output_csv_name = HoldingVerificationCore(
+            mock_db_connection).get_csv_output_writer_and_file_name(
             path, datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")
         )
         csv_name = csv_file.name
@@ -90,7 +93,7 @@ class TestHoldingVerification(unittest.TestCase):
         hash_function.update = Mock()
         hash_function.hexdigest = Mock(return_value="checksum")
 
-        (file_hex, errors) = HoldingVerification(mock_db_connection).get_checksum_for_file(
+        (file_hex, errors) = HoldingVerificationCore(mock_db_connection).get_checksum_for_file(
             self.empty_test_file, hash_function
         )
 
@@ -104,7 +107,7 @@ class TestHoldingVerification(unittest.TestCase):
         hash_function.update = Mock()
         hash_function.hexdigest = Mock(return_value="checksum")
 
-        (file_hex, errors) = HoldingVerification(mock_db_connection).get_checksum_for_file(
+        (file_hex, errors) = HoldingVerificationCore(mock_db_connection).get_checksum_for_file(
             self.test_file, hash_function
         )
 
@@ -118,7 +121,7 @@ class TestHoldingVerification(unittest.TestCase):
         hash_function.update = Mock(side_effect=OSError("OS Error thrown"))
         hash_function.hexdigest = Mock(return_value="checksum")
 
-        (file_hex, errors) = HoldingVerification(mock_db_connection).get_checksum_for_file(
+        (file_hex, errors) = HoldingVerificationCore(mock_db_connection).get_checksum_for_file(
             self.test_file, hash_function
         )
 
@@ -132,10 +135,11 @@ class TestHoldingVerification(unittest.TestCase):
         cursor.execute = Mock()
         cursor.fetchall = Mock(return_value=["result1", "result2"])
         mock_db_connection = Mock()
-        mock_db_connection.cursor = Mock(return_value = cursor)
+        mock_db_connection.cursor = Mock(return_value=cursor)
 
-        response = HoldingVerification(mock_db_connection).find_checksum_in_db("mock_hash")
-        cursor.execute.assert_called_with("""SELECT file_ref, fixity_value, algorithm_name FROM files_in_dri WHERE "fixity_value" = "mock_hash";""")
+        response = HoldingVerificationCore(mock_db_connection).find_checksum_in_db("mock_hash")
+        cursor.execute.assert_called_with(
+            """SELECT file_ref, fixity_value, algorithm_name FROM files_in_dri WHERE "fixity_value" = "mock_hash";""")
         self.assertEqual(["result1", "result2"], response)
 
     def test_get_rows_with_hash_should_call_other_methods_1X_if_it_starts_with_sha256_and_sha256_checksum_found(self):
@@ -363,7 +367,8 @@ class TestHoldingVerification(unittest.TestCase):
         (args, _) = csv_writer.writerow.call_args
         self.assertEqual(((self.test_file, 19, False, "", "", ""),), args)
 
-    def test_run_should_write_the_correct_info_to_the_csv_if_error_was_thrown_when_getting_checksum_and_return_a_tally(self):
+    def test_run_should_write_the_correct_info_to_the_csv_if_error_was_thrown_when_getting_checksum_and_return_a_tally(
+        self):
         csv_writer = Mock()
         csv_writer.writerow = Mock()
         mock_holding_verification = self.HVWithMockedRowsWithHash(
@@ -390,10 +395,11 @@ class TestHoldingVerification(unittest.TestCase):
             True,
             all("'non_existent_db_file_name' is missing from the directory '" in input_arg[0][0] for input_arg in
                 confirm_prompt_input_args
-            )
+                )
         )
 
-    def test_main_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(self):
+    def test_main_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(
+        self):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
@@ -401,7 +407,7 @@ class TestHoldingVerification(unittest.TestCase):
             {"path": (self.test_file, self.empty_test_file), "is_directory": False},
             db_connection
         )
-        main(mock_holding_verification, mock_holding_verification.file_or_dir)
+        mock_holding_verification.start(mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
         ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
@@ -425,14 +431,15 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
 
-    def test_main_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(self):
+    def test_main_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(
+        self):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
         mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
             {"path": (self.test_files_folder,), "is_directory": True}, db_connection
         )
-        main(mock_holding_verification, mock_holding_verification.file_or_dir)
+        mock_holding_verification.start(mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
         ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args

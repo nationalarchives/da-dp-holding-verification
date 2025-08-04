@@ -44,7 +44,7 @@ These all have defaults that can be modified as needed.
 This script is only necessary if you only have the CSV version of the DB, otherwise, skip to the 
 holding_verification.py with the DB or generate a new DB with the headings mentioned in step 1
 
-### 2. holding_verification.py
+### 2. holding_verification_core.py
 
 Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FILE_WITH_CHECKSUMS:
 
@@ -60,9 +60,9 @@ Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FIL
    4. It will write the information obtained from the DB as well as the path, file size and `True` or `False` value 
       for whether the checksum was found
 
-### 3. get_path_from_user.py
+### 3. holding_verification_ui.py
 
-(called by 'holding_verification.py') Allows you to select 1 or more files or a folder, via GUI or (Command Line
+(called by 'holding_verification_core.py') Allows you to select 1 or more files or a folder, via GUI or (Command Line
 Interface) CLI.
 
 1. It will ask the user if they would like to use the GUI or CLI to select the file(s)/folder
@@ -86,10 +86,11 @@ Interface) CLI.
       2. Once the user types either `f` or `d` and presses "Enter", they will be asked to add the full path to the
          file/folder
 3. What you've selected will appear in the command line window and the processing of the file(s) will start
+4. The GUI will remain open until you close it and the CLI will remain open until you enter "q" and press "Enter"
 
-### Running holding_verification.py tests
+### Running holding_verification_core.py tests
 
-The tests are located here `test/test_holding_verification.py`. In order to run the tests, run `python3 -m unittest` or
+The tests are located here `test/test_holding_verification_core.py`. In order to run the tests, run `python3 -m unittest` or
 `python -m unittest` from the root folder. If running from PyCharm, you might have to change the "Working Directory" to the root folder,
 as it might default to the `test` folder.
 

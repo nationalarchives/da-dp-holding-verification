@@ -2,12 +2,17 @@ from pathlib import Path
 from colorama import Fore
 from colorama import Style
 
-from holding_verification import HoldingVerification, main
+from holding_verification_core import HoldingVerificationCore, ResultSummary
 
-
-class GetPathFromUser:
-    def __init__(self, app: HoldingVerification):
+class HoldingVerificationUi:
+    def __init__(self, app: HoldingVerificationCore):
         self.app = app
+
+    def prompt_use_gui(self, gui_or_cli_prompt=input) -> str:
+        return gui_or_cli_prompt(
+            f"Press '{Fore.YELLOW}Enter{Style.RESET_ALL}' to use the GUI or type '{Fore.YELLOW}c{Style.RESET_ALL}'"
+            f" then 'Enter' for the CLI: "
+        ).strip().lower()
 
     def run_verification(self, item_path, result):
         paths_as_string = ",\n  ".join(item_path)
@@ -15,11 +20,12 @@ class GetPathFromUser:
         print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
         result["path"] = item_path
 
-        main(self.app, result)
+        result_summary = self.app.start(result)
+        self.print_summary(result_summary)
 
     def open_select_window(self):
         from sys import platform
-        import tkinter as tk # Importing tkinter here because GitHub Actions can't import it & it's not needed for tests
+        import tkinter as tk  # Importing tkinter here because GitHub Actions can't import it & it's not needed for tests
         from tkinter.filedialog import askdirectory, askopenfilenames
         from tkinterdnd2 import DND_FILES, TkinterDnD
         select_window = TkinterDnD.Tk()  # notice - use this instead of tk.Tk()
@@ -89,8 +95,7 @@ class GetPathFromUser:
         select_dir_button.place(x=folder_button_x, y=file_and_folder_button_y)
 
         dnd_label = tk.Label(select_window, text="...or drag and drop a folder or file(s) onto the box below")
-        list_box = tk.Listbox(select_window, height=16, width=60, bg=dnd_bg_colour, activestyle="dotbox",
-                              font="Helvetica")
+        list_box = tk.Listbox(select_window, height=16, width=60, bg=dnd_bg_colour, activestyle="dotbox", font="Helvetica")
         # register the listbox as a drop target
         list_box.drop_target_register(DND_FILES)
         confirmed_dropped_items = []
@@ -102,13 +107,12 @@ class GetPathFromUser:
             path = Path(confirmed_dropped_items[0])
             result["is_directory"] = path.is_dir()
 
-
         def list_dropped_items_callback(drop_event: TkinterDnD.DnDEvent):
             nonlocal confirmed_dropped_items
             # remove all items that were there previously
             confirmed_dropped_items = []
             list_box.delete(0, tk.END)
-            dropped_path_strings = drop_event.data.replace("{", "").replace("}", "") # files with spaces get wrapped in {}
+            dropped_path_strings = drop_event.data.replace("{", "").replace("}", "")  # files with spaces get wrapped in {}
 
             if platform == windows_os:
                 import re
@@ -145,7 +149,6 @@ class GetPathFromUser:
         confirm_dropped_items_button.place(x=dnd_confirm_button_x, y=dnd_confirm_button_y)
 
         select_window.wait_window()
-        select_window.update_idletasks()  # Forces the window to close
 
         if len(item_path) == 0:
             self.app.connection.close()
@@ -185,3 +188,20 @@ class GetPathFromUser:
                 continue
 
         self.run_verification(result["path"], result)
+
+    def print_summary(self, summary: ResultSummary):
+        print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
+        file_or_files = "file was" if summary.files_processed == 1 else "files were"
+        print(f"{Fore.CYAN}{Style.BRIGHT}{summary.files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
+        preserved = summary.tally.get(True)
+        preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
+        print(f"""
+        Files in Preservica/DRI: {preserved_colour:}
+        Files not in Preservica/DRI: {Fore.RED}{summary.tally.get(False):}{Style.RESET_ALL}
+        """)
+
+        print(f"The full results can be found in a file called '{Fore.YELLOW}{summary.output_csv_name}{Style.RESET_ALL}'.\n")
+        if summary.all_file_errors:
+            print("These files encountered errors when trying to generate checksums:\n")
+            for file_error in summary.all_file_errors:
+                print(f"{Fore.RED}{file_error}{Style.RESET_ALL}")
