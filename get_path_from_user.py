@@ -2,9 +2,22 @@ from pathlib import Path
 from colorama import Fore
 from colorama import Style
 
+from holding_verification import HoldingVerification, main
+
 
 class GetPathFromUser:
-    def open_select_window(self) -> dict[str, tuple[str] | bool]:
+    def __init__(self, app: HoldingVerification):
+        self.app = app
+
+    def run_verification(self, item_path, result):
+        paths_as_string = ",\n  ".join(item_path)
+        paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
+        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
+        result["path"] = item_path
+
+        main(self.app, result)
+
+    def open_select_window(self):
         from sys import platform
         import tkinter as tk # Importing tkinter here because GitHub Actions can't import it & it's not needed for tests
         from tkinter.filedialog import askdirectory, askopenfilenames
@@ -15,7 +28,7 @@ class GetPathFromUser:
         select_window.eval('tk::PlaceWindow . center')
         item_path = tuple()
         result = {}
-        windows_os = "win32" # Windows 64-bit also falls under "win32"
+        windows_os = "win32"  # Windows 64-bit also falls under "win32"
 
         if platform == windows_os:
             window_dims = "565x490"
@@ -45,7 +58,7 @@ class GetPathFromUser:
             nonlocal confirmed_dropped_items
             confirmed_dropped_items = []
             list_box.delete(0, tk.END)
-            confirm_dropped_items_button.config(bg = 'SystemButtonFace')
+            confirm_dropped_items_button.config(bg='SystemButtonFace')
             confirm_dropped_items_button["state"] = "disabled"
 
         def file_callback() -> None:
@@ -55,7 +68,7 @@ class GetPathFromUser:
             item_path = askopenfilenames(parent=select_window, initialdir="", title='Select File(s)')
             if item_path != "":
                 result["is_directory"] = False
-                select_window.destroy()
+                self.run_verification(item_path, result)
 
         def folder_callback() -> None:
             nonlocal item_path
@@ -66,21 +79,21 @@ class GetPathFromUser:
 
             if item_path != ("",):
                 result["is_directory"] = True
-                select_window.destroy()
+                self.run_verification(item_path, result)
 
-        select_file_button = tk.Button(select_window, bg= "blue", fg=button_text_colour, text="Select File(s)",
+        select_file_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
-        select_dir_button = tk.Button(select_window, bg= "blue", fg=button_text_colour, text="Select Folder",
+        select_dir_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select Folder",
                                       command=folder_callback)
         select_file_button.place(x=file_button_x, y=file_and_folder_button_y)
         select_dir_button.place(x=folder_button_x, y=file_and_folder_button_y)
 
-        dnd_label = tk.Label(select_window, text = "...or drag and drop a folder or file(s) onto the box below")
-        list_box = tk.Listbox(select_window, height = 16, width = 60, bg = dnd_bg_colour, activestyle = "dotbox", font = "Helvetica")
+        dnd_label = tk.Label(select_window, text="...or drag and drop a folder or file(s) onto the box below")
+        list_box = tk.Listbox(select_window, height=16, width=60, bg=dnd_bg_colour, activestyle="dotbox",
+                              font="Helvetica")
         # register the listbox as a drop target
         list_box.drop_target_register(DND_FILES)
         confirmed_dropped_items = []
-
 
         def get_items_and_close_window_callback():
             nonlocal item_path
@@ -105,7 +118,7 @@ class GetPathFromUser:
             else:
                 paths_with_safe_delimiter = dropped_path_strings.replace(" /", "<-DELIMITER->/")
                 dropped_items = paths_with_safe_delimiter.split("<-DELIMITER->")
-            correct_item_types_dropped = True # user must drop either files or a single folder
+            correct_item_types_dropped = True  # user must drop either files or a single folder
 
             for dropped_item_path in dropped_items:
                 path = Path(dropped_item_path)
@@ -126,7 +139,7 @@ class GetPathFromUser:
         list_box.place(x=10, y=140)
 
         confirm_dropped_items_button = tk.Button(
-            select_window, text ="Confirm dropped items", command = get_items_and_close_window_callback
+            select_window, text="Confirm dropped items", command=get_items_and_close_window_callback
         )
         confirm_dropped_items_button["state"] = "disabled"
         confirm_dropped_items_button.place(x=dnd_confirm_button_x, y=dnd_confirm_button_y)
@@ -135,17 +148,13 @@ class GetPathFromUser:
         select_window.update_idletasks()  # Forces the window to close
 
         if len(item_path) == 0:
+            self.app.connection.close()
             print(f"{Fore.RED}Application closed.{Style.RESET_ALL}")
             exit()  # User has closed the application window
 
-        paths_as_string = ",\n  ".join(item_path)
-        paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
-        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
-        result["path"] = item_path
-        return result
+        select_window.update_idletasks()  # Forces the window to close
 
-
-    def cli_input(self) -> dict[str, tuple[str] | bool]:
+    def cli_input(self):
         path_types = {"f": "file", "d": "directory"}
         result = {}
         while True:
@@ -174,4 +183,5 @@ class GetPathFromUser:
             else:
                 print(f"{file_or_dir} is not a valid option.")
                 continue
-        return result
+
+        self.run_verification(result["path"], result)

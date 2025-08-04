@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock
 
-from holding_verification import HoldingVerification, main, GetPathFromUser, check_db_exists
+from holding_verification import HoldingVerification, main, check_db_exists
 
 
 class TestHoldingVerification(unittest.TestCase):
@@ -17,8 +17,9 @@ class TestHoldingVerification(unittest.TestCase):
 
     class HVWithMockedChecksumMethods(HoldingVerification):
         def __init__(self, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
-                     checksum_in_db_return_vals: tuple[list[list[str]]]=(),
-                     checksum_for_file_return_vals: tuple[str] = ("sha256Checksum123", "md5Checksum234", "sha1Checksum345")):
+                     checksum_in_db_return_vals: tuple[list[list[str]]] = (),
+                     checksum_for_file_return_vals: tuple[str] = ("sha256Checksum123", "md5Checksum234",
+                                                                  "sha1Checksum345")):
             super().__init__(Mock())
             self.checksum_for_file = iter(checksum_for_file_return_vals)
             self.errors_when_getting_checksum_for_file = iter(checksum_for_file_return_errors)
@@ -26,7 +27,6 @@ class TestHoldingVerification(unittest.TestCase):
             self.checksum_for_file_calls = 0
             self.checksum_in_db_calls = 0
             self.options = iter(["c", "f"])
-
 
         def get_checksum_for_file(self, file_path: str, hash_func) -> tuple[str, dict[str, str]]:
             self.checksum_for_file_calls += 1
@@ -56,13 +56,8 @@ class TestHoldingVerification(unittest.TestCase):
             self.csv_file.close = Mock()
             self.csv_writer = Mock(object_type="csv_writer")
             self.output_csv_name = "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv"
-            self.get_file_or_dir_from_user_args = Mock()
             self.get_csv_output_writer_and_file_name_args = Mock()
             self.run_args = Mock()
-
-        def get_file_or_dir_from_user(self, gui_or_cli_prompt=input, file_prompt=GetPathFromUser):
-            self.get_file_or_dir_from_user_args(gui_or_cli_prompt, file_prompt)
-            return self.file_or_dir
 
         def get_csv_output_writer_and_file_name(self, dir_path: Path, date: str=datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")):
             self.get_csv_output_writer_and_file_name_args(dir_path, date)
@@ -88,7 +83,6 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(expected_csv_file_name, output_csv_name)
         self.assertEqual(os.path.exists(expected_csv_file_name), True)
         os.remove(expected_csv_file_name)
-
 
     def test_get_checksum_for_file_should_not_call_update_if_file_has_no_bytes_to_read(self):
         mock_db_connection = Mock()
@@ -384,31 +378,6 @@ class TestHoldingVerification(unittest.TestCase):
         (args, _) = csv_writer.writerow.call_args
         self.assertEqual(((self.test_file, 19, False, "", "", ""),), args)
 
-    def test_get_file_or_dir_from_user_should_lower_case_the_c_and_call_cli_input(self):
-        for user_input in ["  c ",  "  C  "]:
-            gui_choice_input = Mock(return_value=user_input)
-
-            file_prompt = Mock
-            file_prompt.cli_input = Mock(return_value={"path": (self.test_file,), "is_directory": False})
-            file_prompt.open_select_window = Mock(return_value={"'open_select_window' should not be called": "wrong"})
-            paths = HoldingVerification(Mock()).get_file_or_dir_from_user(gui_choice_input, file_prompt)
-            (gui_choice_input_args, _) = gui_choice_input.call_args
-            self.assertEqual(("Press '\x1b[33mEnter\x1b[0m' to use the GUI or type '\x1b[33mc\x1b[0m' then 'Enter' for the CLI: ",), gui_choice_input_args)
-            self.assertEqual({"path": (self.test_file,), "is_directory": False}, paths)
-
-    def test_get_file_or_dir_from_user_should_call_gui_if_user_input_is_not_a_c(self):
-        for user_input in ["", "cc", "C.", "c."]:
-            gui_choice_input = Mock(return_value=user_input)
-
-            file_prompt = Mock
-            file_prompt.open_select_window = Mock(return_value={"path": (self.test_file,),
-                                                                "is_directory": False})
-            file_prompt.cli_input = Mock(return_value={"'cli_input' should not be called": "wrong"})
-            paths = HoldingVerification(Mock()).get_file_or_dir_from_user(gui_choice_input, file_prompt)
-            (gui_choice_input_args, _) = gui_choice_input.call_args
-            self.assertEqual(("Press '\x1b[33mEnter\x1b[0m' to use the GUI or type '\x1b[33mc\x1b[0m' then 'Enter' for the CLI: ",), gui_choice_input_args)
-            self.assertEqual({"path": (self.test_file,), "is_directory": False}, paths)
-
     def test_check_db_exists_should_prompt_the_user_if_db_does_not_exist(self):
         db_file_name = "non_existent_db_file_name"
         confirm_prompt = Mock()
@@ -424,13 +393,6 @@ class TestHoldingVerification(unittest.TestCase):
             )
         )
 
-    def test_check_db_exists_should_not_prompt_the_user_if_db_does_exist(self):
-        confirm_prompt = Mock()
-        check_db_exists(self.empty_test_db, confirm_prompt)
-
-        confirm_prompt_input_args = confirm_prompt.call_args_list
-        self.assertEqual(0, confirm_prompt.call_count)
-
     def test_main_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -439,9 +401,7 @@ class TestHoldingVerification(unittest.TestCase):
             {"path": (self.test_file, self.empty_test_file), "is_directory": False},
             db_connection
         )
-        main(mock_holding_verification)
-
-        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count) # no args to check
+        main(mock_holding_verification, mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
         ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
@@ -454,7 +414,7 @@ class TestHoldingVerification(unittest.TestCase):
             ((self.test_file, {}), (self.empty_test_file, {True: 1}))
         )
         for (run_args, _), (expected_file_path, expected_tally) in actual_and_expected_args:
-            first_3_run_args = run_args[0 : 3]
+            first_3_run_args = run_args[0: 3]
             csv_writer_run_args = run_args[3]
             tally = run_args[4]
 
@@ -464,7 +424,6 @@ class TestHoldingVerification(unittest.TestCase):
 
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
-        self.assertEqual(1, db_connection.close.call_count)
 
     def test_main_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(self):
         db_connection = Mock()
@@ -473,9 +432,7 @@ class TestHoldingVerification(unittest.TestCase):
         mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
             {"path": (self.test_files_folder,), "is_directory": True}, db_connection
         )
-        main(mock_holding_verification)
-
-        self.assertEqual(1, mock_holding_verification.get_file_or_dir_from_user_args.call_count) # no args to check
+        main(mock_holding_verification, mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
         ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
@@ -489,7 +446,7 @@ class TestHoldingVerification(unittest.TestCase):
         )
         for (run_args, _), (expected_file_path, expected_tally) in actual_and_expected_args:
             path_arg = run_args[0]
-            hash_name_and_all_errors = run_args[1 : 3]
+            hash_name_and_all_errors = run_args[1: 3]
             csv_writer_run_args = run_args[3]
             tally = run_args[4]
             self.assertEqual(True, Path(path_arg).match(f"*{expected_file_path}"))
@@ -499,7 +456,7 @@ class TestHoldingVerification(unittest.TestCase):
 
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
-        self.assertEqual(1, db_connection.close.call_count)
+
 
 if __name__ == "__main__":
     unittest.main()

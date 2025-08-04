@@ -1,24 +1,23 @@
+import configparser
 import csv
 import hashlib
+import os
 import sqlite3
-import configparser
-
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-import os
 
-from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
-
-from get_path_from_user import GetPathFromUser
+from colorama import init as colorama_init
 
 colorama_init()
 
 config = configparser.ConfigParser()
 config.read("config.ini")
 default_config = config["DEFAULT"]
+
 
 def check_db_exists(db_file_name, confirm_db_added_prompt=input):
     db_file_does_not_exist = True
@@ -29,8 +28,16 @@ def check_db_exists(db_file_name, confirm_db_added_prompt=input):
             response = confirm_db_added_prompt(
                 f"'{db_file_name}' is missing from the directory '{os.getcwd()}'; add it a press 'Enter' to continue"
             )
-            if isinstance(response, bool): # In tests, confirm_db_added_prompt returns Boolean in order to break loop
+            if isinstance(response, bool):  # In tests, confirm_db_added_prompt returns Boolean in order to break loop
                 db_file_does_not_exist = response
+
+
+@dataclass(frozen=True)
+class ResultSummary:
+    files_processed: int
+    tally: dict[bool, int]
+    all_file_errors: list[dict[str, str]]
+    output_csv_name: str
 
 
 class HoldingVerification:
@@ -41,7 +48,6 @@ class HoldingVerification:
     BUFFER_SIZE = 1_000_000
     table_name = default_config["CHECKSUM_TABLE_NAME"]
     select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
-
 
     def get_checksum_for_file(self, file_path: str, hash_func) -> tuple[str, dict[str, str]]:
         errors = dict()
@@ -58,12 +64,10 @@ class HoldingVerification:
             errors[file_path] = str(e)
             return "", errors
 
-
     def find_checksum_in_db(self, file_hash: str) -> list[list[str]]:
         self.cursor.execute(f"""{self.select_statement}= "{file_hash}";""")
         results_with_hash = self.cursor.fetchall()
         return results_with_hash
-
 
     def get_rows_with_hash(self, path: str, file_hash_name: str):
         #  MD5 is 2nd since really old files (which we have a lot of) are MD5 so looking for them first is optimal
@@ -90,7 +94,7 @@ class HoldingVerification:
         if file_size > 500_000_000:
             print(f"Currently processing a file that is {file_size:,} bytes; might take a while...")
 
-        (rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) =\
+        (rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) = \
             self.get_rows_with_hash(path, file_hash_name)
 
         checksum_found_colour = f"{Fore.GREEN}{checksum_found}{Style.RESET_ALL}" if checksum_found else (
@@ -111,33 +115,24 @@ class HoldingVerification:
         starting_hash_name_for_next_file = checksum_algo_name if checksum_found else file_hash_name
         return starting_hash_name_for_next_file, all_file_errors, tally
 
-    def get_csv_output_writer_and_file_name(self, path: Path, date: str=datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
-        output_csv_name =  f"INGESTED_FILES_in_{path.name}_{date}.csv"
+    def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
+        output_csv_name = f"INGESTED_FILES_in_{path.name}_{date}.csv"
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "Matching File Refs",
                              "Algorithm Name", "Algorithm Hash"))
         return csv_file, csv_writer, output_csv_name
 
-    def get_file_or_dir_from_user(self, gui_or_cli_prompt=input, file_prompt=GetPathFromUser) -> dict[str, tuple[str] | bool]:
-        use_gui = gui_or_cli_prompt(
-            f"Press '{Fore.YELLOW}Enter{Style.RESET_ALL}' to use the GUI or type '{Fore.YELLOW}c{Style.RESET_ALL}'"
-            f" then 'Enter' for the CLI: "
-        ).strip().lower()
-        prompt = file_prompt()
-        return prompt.cli_input() if use_gui == "c" else (prompt.open_select_window())
 
-
-def main(app: HoldingVerification):
-    file_or_dir: dict[str, tuple[str] | bool] = app.get_file_or_dir_from_user()
+def main(app: HoldingVerification, file_or_dir: dict[str, tuple[str] | bool]):
     is_directory = file_or_dir["is_directory"]
     paths = file_or_dir["path"]
-    path_of_an_item_path = Path(paths[0]) # assuming that files are in the same folder for now
+    path_of_an_item_path = Path(paths[0])  # assuming that files are in the same folder for now
     dir_path: Path = path_of_an_item_path.parent if path_of_an_item_path.is_file() else path_of_an_item_path
 
     assumed_hash_algo = "sha256"  # SHA256 because newer files have SHA256 hashes
     all_file_errors: list[dict[str, str]] = []
-    tally = defaultdict(int)
+    tally: dict[bool, int] = defaultdict(int)
     files_processed = 0
 
     csv_file, csv_writer, output_csv_name = app.get_csv_output_writer_and_file_name(dir_path)
@@ -164,12 +159,11 @@ def main(app: HoldingVerification):
 
     csv_file.close()
     app.connection.commit()
-    app.connection.close()
 
     print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
     file_or_files = "file was" if files_processed == 1 else "files were"
     print(f"{Fore.CYAN}{Style.BRIGHT}{files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
-    preserved =  tally.get(True)
+    preserved = tally.get(True)
     preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
     print(f"""
     Files in Preservica/DRI: {preserved_colour:}
@@ -181,25 +175,3 @@ def main(app: HoldingVerification):
         print("These files encountered errors when trying to generate checksums:\n")
         for file_error in all_file_errors:
             print(f"{Fore.RED}{file_error}{Style.RESET_ALL}")
-
-
-if __name__ == "__main__":
-    from sys import platform
-# On Macs, the exe runs the script in the '_internal' dir so this changes it to the location of the executable
-    if platform == "darwin":
-        os.chdir(Path(__file__).parent.parent)
-
-    db_file_name = default_config["CHECKSUM_DB_NAME"]
-    check_db_exists(db_file_name)
-
-    db_function = sqlite3.connect(db_file_name)
-    app = HoldingVerification(db_function)
-    main(app)
-
-    while True:
-        user_choice = input(f"Press '{Fore.YELLOW}q{Style.RESET_ALL}' and '{Fore.YELLOW}Enter{Style.RESET_ALL}' to "
-                            f"quit: ").lower()
-        if user_choice == "q":
-            break
-        else:
-            continue
