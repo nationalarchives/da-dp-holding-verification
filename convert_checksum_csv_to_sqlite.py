@@ -20,8 +20,9 @@ def populate_table(cursor: sqlite3.Cursor, table_name: str, rows_to_write: tuple
 def main():
     config = configparser.ConfigParser()
     config.read("config.ini")
-    checksum_db_name = config["DEFAULT"]["CHECKSUM_DB_NAME"]
-    table_name = config["DEFAULT"]["CHECKSUM_TABLE_NAME"]
+    default_config = config["DEFAULT"]
+    checksum_db_name = default_config["CHECKSUM_DB_NAME"]
+    table_name = default_config["CHECKSUM_TABLE_NAME"]
     csv_name = input("Paste the full path of the CSV file with the checksums here and press ENTER: ")
 
     connection = sqlite3.connect(checksum_db_name)
@@ -29,9 +30,9 @@ def main():
 
     cursor.execute(f"CREATE TABLE {table_name} (file_ref, fixity_value, algorithm_name);")
 
-    file_ref_col = config["DEFAULT"]["CSV_FILEREF_COLUMN"]
-    fixity_value_col = config["DEFAULT"]["CSV_FIXITYVALUE_COLUMN"]
-    algo_name_col = config["DEFAULT"]["CSV_ALGORITHMNAME_COLUMN"]
+    file_ref_col = default_config["CSV_FILEREF_COLUMN"]
+    fixity_value_col = default_config["CSV_FIXITYVALUE_COLUMN"]
+    algo_name_col = default_config["CSV_ALGORITHMNAME_COLUMN"]
 
     rows_to_write = get_csv_rows(csv_name, file_ref_col, fixity_value_col, algo_name_col)
     populate_table(cursor, table_name, rows_to_write)
