@@ -26,6 +26,7 @@ jobs:
           Invoke-WebRequest https://raw.githubusercontent.com/Eliav2/tkinterdnd2/refs/heads/master/hook-tkinterdnd2.py -OutFile .\hook-tkinterdnd2.py
           pip install -r requirements.txt
           pyinstaller --icon=".\folder_smile.ico" holding_verification.py --additional-hooks-dir=.
+          Copy-Item -Path config.ini -Destination dist/holding_verification
           mkdir zipped_executable
           Compress-Archive -Path dist/* -Destination zipped_executable/da-holding-verification-windows-64.zip
           gh release create --generate-notes ${{ steps.next-tag.outputs.next-version }} zipped_executable/da-holding-verification-windows-64.zip

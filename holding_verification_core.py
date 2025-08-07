@@ -2,7 +2,6 @@ import configparser
 import csv
 import hashlib
 import os
-import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -13,10 +12,6 @@ from colorama import Style
 from colorama import init as colorama_init
 
 colorama_init()
-
-config = configparser.ConfigParser()
-config.read("config.ini")
-default_config = config["DEFAULT"]
 
 
 def check_db_exists(db_file_name, confirm_db_added_prompt=input):
@@ -44,10 +39,13 @@ class HoldingVerificationCore:
     def __init__(self, connection):
         self.connection = connection
         self.cursor = self.connection.cursor()
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+        default_config = config["DEFAULT"]
+        table_name = default_config["CHECKSUM_TABLE_NAME"]
+        self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
 
     BUFFER_SIZE = 1_000_000
-    table_name = default_config["CHECKSUM_TABLE_NAME"]
-    select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
 
     def get_checksum_for_file(self, file_path: str, hash_func) -> tuple[str, dict[str, str]]:
         errors = dict()
