@@ -1,3 +1,4 @@
+import configparser
 from collections import defaultdict
 from datetime import datetime
 import os
@@ -15,12 +16,16 @@ class TestHoldingVerification(unittest.TestCase):
         self.empty_test_db = os.path.normpath("test/test_files/test_checksums_of_files_in_dri.testdb")
         self.test_files_folder = os.path.normpath("test/test_files")
 
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    table_name = config["DEFAULT"]["CHECKSUM_TABLE_NAME"]
+
     class HVWithMockedChecksumMethods(HoldingVerificationCore):
-        def __init__(self, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
+        def __init__(self, table_name, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
                      checksum_in_db_return_vals: tuple[list[list[str]]] = (),
                      checksum_for_file_return_vals: tuple[str] = ("sha256Checksum123", "md5Checksum234",
                                                                   "sha1Checksum345")):
-            super().__init__(Mock())
+            super().__init__(Mock(), table_name)
             self.checksum_for_file = iter(checksum_for_file_return_vals)
             self.errors_when_getting_checksum_for_file = iter(checksum_for_file_return_errors)
             self.checksum_in_db = iter(checksum_in_db_return_vals)
@@ -37,10 +42,10 @@ class TestHoldingVerification(unittest.TestCase):
             return next(self.checksum_in_db)
 
     class HVWithMockedRowsWithHash(HoldingVerificationCore):
-        def __init__(self, rows_with_hash: list[list[str]], checksum_found: bool,
+        def __init__(self, table_name, rows_with_hash: list[list[str]], checksum_found: bool,
                      errors_generating_checksum: dict[str, str],
                      next_hash_name: str):
-            super().__init__(Mock())
+            super().__init__(Mock(), table_name)
             self.rows_with_hash = rows_with_hash
             self.checksum_found = checksum_found
             self.errors_generating_checksum = errors_generating_checksum
@@ -50,8 +55,8 @@ class TestHoldingVerification(unittest.TestCase):
             return self.rows_with_hash, self.checksum_found, self.errors_generating_checksum, self.next_hash_name
 
     class HVWithMockedUserPromptCsvAndRunMethods(HoldingVerificationCore):
-        def __init__(self, file_or_dir: dict[str, tuple[str] | bool], db_connection):
-            super().__init__(db_connection)
+        def __init__(self, table_name, file_or_dir: dict[str, tuple[str] | bool], db_connection):
+            super().__init__(db_connection, table_name)
             self.file_or_dir = file_or_dir
             self.csv_file = Mock()
             self.csv_file.close = Mock()
@@ -74,7 +79,7 @@ class TestHoldingVerification(unittest.TestCase):
         path = Path("test_files")
         mock_db_connection = Mock()
         csv_file, csv_writer, output_csv_name = HoldingVerificationCore(
-            mock_db_connection).get_csv_output_writer_and_file_name(
+            mock_db_connection, self.table_name).get_csv_output_writer_and_file_name(
             path, datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")
         )
         csv_name = csv_file.name
@@ -93,7 +98,7 @@ class TestHoldingVerification(unittest.TestCase):
         hash_function.update = Mock()
         hash_function.hexdigest = Mock(return_value="checksum")
 
-        (file_hex, errors) = HoldingVerificationCore(mock_db_connection).get_checksum_for_file(
+        (file_hex, errors) = HoldingVerificationCore(mock_db_connection, self.table_name).get_checksum_for_file(
             self.empty_test_file, hash_function
         )
 
@@ -107,7 +112,7 @@ class TestHoldingVerification(unittest.TestCase):
         hash_function.update = Mock()
         hash_function.hexdigest = Mock(return_value="checksum")
 
-        (file_hex, errors) = HoldingVerificationCore(mock_db_connection).get_checksum_for_file(
+        (file_hex, errors) = HoldingVerificationCore(mock_db_connection, self.table_name).get_checksum_for_file(
             self.test_file, hash_function
         )
 
@@ -121,7 +126,7 @@ class TestHoldingVerification(unittest.TestCase):
         hash_function.update = Mock(side_effect=OSError("OS Error thrown"))
         hash_function.hexdigest = Mock(return_value="checksum")
 
-        (file_hex, errors) = HoldingVerificationCore(mock_db_connection).get_checksum_for_file(
+        (file_hex, errors) = HoldingVerificationCore(mock_db_connection, self.table_name).get_checksum_for_file(
             self.test_file, hash_function
         )
 
@@ -137,13 +142,13 @@ class TestHoldingVerification(unittest.TestCase):
         mock_db_connection = Mock()
         mock_db_connection.cursor = Mock(return_value=cursor)
 
-        response = HoldingVerificationCore(mock_db_connection).find_checksum_in_db("mock_hash")
+        response = HoldingVerificationCore(mock_db_connection, self.table_name).find_checksum_in_db("mock_hash")
         cursor.execute.assert_called_with(
             """SELECT file_ref, fixity_value, algorithm_name FROM files_in_dri WHERE "fixity_value" = "mock_hash";""")
         self.assertEqual(["result1", "result2"], response)
 
     def test_get_rows_with_hash_should_call_other_methods_1X_if_it_starts_with_sha256_and_sha256_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({},), ([["1", "sha256Checksum123", "sha256"]],)
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -160,7 +165,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_2X_if_it_starts_with_sha256_but_md5_checksum_found(self):
 
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}), ([], [["2", "md5Checksum234", "md5"]])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -177,7 +182,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_sha256_but_sha1_checksum_found(self):
 
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}, {}), ([], [], [["3", "sha1Checksum345", "sha1"]])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -193,7 +198,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_sha256_but_no_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}, {}), ([], [], [])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -209,7 +214,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_1X_if_it_starts_with_md5_and_md5_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({},), ([["2", "md5Checksum234", "md5"]],)
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -225,7 +230,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_2X_if_it_starts_with_md5_but_sha256_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}), ([], [["1", "sha256Checksum123", "sha256"]])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -241,7 +246,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(2, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_md5_but_sha1_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}, {}), ([], [], [["3", "sha1Checksum345", "sha1"]])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -257,7 +262,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_md5_but_no_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}, {}), ([], [], [])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -273,7 +278,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_1X_if_it_starts_with_sha1_and_sha1_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({},), ([["3", "sha1Checksum345", "sha1"]],)
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -289,7 +294,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_2X_if_it_starts_with_sha1_but_sha256_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}), ([], [["1", "sha256Checksum123", "sha256"]])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -305,7 +310,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(2, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_sha1_but_md5_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}, {}), ([], [], [["2", "md5Checksum234", "md5"]])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -321,7 +326,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, mock_holding_verification.checksum_in_db_calls)
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_sha1_but_no_checksum_found(self):
-        mock_holding_verification = self.HVWithMockedChecksumMethods(
+        mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
             ({}, {}, {}), ([], [], [])
         )
         (rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
@@ -339,7 +344,7 @@ class TestHoldingVerification(unittest.TestCase):
     def test_run_should_write_the_correct_info_to_the_csv_if_checksum_found_and_return_a_tally(self):
         csv_writer = Mock()
         csv_writer.writerow = Mock()
-        mock_holding_verification = self.HVWithMockedRowsWithHash(
+        mock_holding_verification = self.HVWithMockedRowsWithHash(self.table_name,
             [["1", "sha256Checksum123", "sha256"], ["10", "sha256Checksum123", "sha256"]],
             True, dict(), "sha256"
         )
@@ -355,7 +360,7 @@ class TestHoldingVerification(unittest.TestCase):
     def test_run_should_write_the_correct_info_to_the_csv_if_checksum_not_found_and_return_a_tally(self):
         csv_writer = Mock()
         csv_writer.writerow = Mock()
-        mock_holding_verification = self.HVWithMockedRowsWithHash(
+        mock_holding_verification = self.HVWithMockedRowsWithHash(self.table_name,
             [], False, dict(), "sha256"
         )
         (starting_hash_name_for_next_file, all_file_errors, tally) = mock_holding_verification.run(
@@ -371,7 +376,7 @@ class TestHoldingVerification(unittest.TestCase):
         self):
         csv_writer = Mock()
         csv_writer.writerow = Mock()
-        mock_holding_verification = self.HVWithMockedRowsWithHash(
+        mock_holding_verification = self.HVWithMockedRowsWithHash(self.table_name,
             [], False, {self.test_file: "OS Error thrown"}, "sha256"
         )
         (starting_hash_name_for_next_file, all_file_errors, tally) = mock_holding_verification.run(
@@ -403,7 +408,7 @@ class TestHoldingVerification(unittest.TestCase):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
-        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
+        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name,
             {"path": (self.test_file, self.empty_test_file), "is_directory": False},
             db_connection
         )
@@ -436,7 +441,7 @@ class TestHoldingVerification(unittest.TestCase):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
-        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
+        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name,
             {"path": (self.test_files_folder,), "is_directory": True}, db_connection
         )
         mock_holding_verification.start(mock_holding_verification.file_or_dir)

@@ -21,9 +21,10 @@ def main():
     default_config = config["DEFAULT"]
     db_file_name = default_config["CHECKSUM_DB_NAME"]
     check_db_exists(db_file_name)
+    table_name = default_config["CHECKSUM_TABLE_NAME"]
 
     db_function = sqlite3.connect(db_file_name)
-    app_core = HoldingVerificationCore(db_function)
+    app_core = HoldingVerificationCore(db_function, table_name)
     ui = HoldingVerificationUi(app_core)
     cli_or_gui = ui.prompt_use_gui()
 

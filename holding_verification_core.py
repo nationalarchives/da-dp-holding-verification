@@ -36,13 +36,9 @@ class ResultSummary:
 
 
 class HoldingVerificationCore:
-    def __init__(self, connection):
+    def __init__(self, connection, table_name):
         self.connection = connection
         self.cursor = self.connection.cursor()
-        config = configparser.ConfigParser()
-        config.read("config.ini")
-        default_config = config["DEFAULT"]
-        table_name = default_config["CHECKSUM_TABLE_NAME"]
         self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
 
     BUFFER_SIZE = 1_000_000
