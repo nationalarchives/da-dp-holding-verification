@@ -13,7 +13,9 @@ from sys import platform
 def main():
     # On Macs, the exe runs the script in the '_internal' dir so this changes it to the location of the executable
     if platform == "darwin":
-        os.chdir(Path(__file__).parent.parent)
+        file_loc = Path(__file__) # this file's location
+        os.chdir(file_loc.parent.parent if file_loc.parent.name.endswith("_internal") else file_loc.parent)
+
     config = configparser.ConfigParser()
     config.read("config.ini")
     default_config = config["DEFAULT"]
