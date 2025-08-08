@@ -2,11 +2,30 @@ from pathlib import Path
 from colorama import Fore
 from colorama import Style
 
+from holding_verification_core import HoldingVerificationCore, ResultSummary
 
-class GetPathFromUser:
-    def open_select_window(self) -> dict[str, tuple[str] | bool]:
+class HoldingVerificationUi:
+    def __init__(self, app: HoldingVerificationCore):
+        self.app = app
+
+    def prompt_use_gui(self, gui_or_cli_prompt=input) -> str:
+        return gui_or_cli_prompt(
+            f"Press '{Fore.YELLOW}Enter{Style.RESET_ALL}' to use the GUI or type '{Fore.YELLOW}c{Style.RESET_ALL}'"
+            f" then 'Enter' for the CLI: "
+        ).strip().lower()
+
+    def run_verification(self, item_path, result):
+        paths_as_string = ",\n  ".join(item_path)
+        paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
+        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
+        result["path"] = item_path
+
+        result_summary = self.app.start(result)
+        self.print_summary(result_summary)
+
+    def open_select_window(self):
         from sys import platform
-        import tkinter as tk # Importing tkinter here because GitHub Actions can't import it & it's not needed for tests
+        import tkinter as tk  # Importing tkinter here because GitHub Actions can't import it & it's not needed for tests
         from tkinter.filedialog import askdirectory, askopenfilenames
         from tkinterdnd2 import DND_FILES, TkinterDnD
         select_window = TkinterDnD.Tk()  # notice - use this instead of tk.Tk()
@@ -15,7 +34,7 @@ class GetPathFromUser:
         select_window.eval('tk::PlaceWindow . center')
         item_path = tuple()
         result = {}
-        windows_os = "win32" # Windows 64-bit also falls under "win32"
+        windows_os = "win32"  # Windows 64-bit also falls under "win32"
 
         if platform == windows_os:
             window_dims = "565x490"
@@ -45,7 +64,7 @@ class GetPathFromUser:
             nonlocal confirmed_dropped_items
             confirmed_dropped_items = []
             list_box.delete(0, tk.END)
-            confirm_dropped_items_button.config(bg = 'SystemButtonFace')
+            confirm_dropped_items_button.config(bg='SystemButtonFace')
             confirm_dropped_items_button["state"] = "disabled"
 
         def file_callback() -> None:
@@ -55,7 +74,7 @@ class GetPathFromUser:
             item_path = askopenfilenames(parent=select_window, initialdir="", title='Select File(s)')
             if item_path != "":
                 result["is_directory"] = False
-                select_window.destroy()
+                self.run_verification(item_path, result)
 
         def folder_callback() -> None:
             nonlocal item_path
@@ -66,21 +85,20 @@ class GetPathFromUser:
 
             if item_path != ("",):
                 result["is_directory"] = True
-                select_window.destroy()
+                self.run_verification(item_path, result)
 
-        select_file_button = tk.Button(select_window, bg= "blue", fg=button_text_colour, text="Select File(s)",
+        select_file_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
-        select_dir_button = tk.Button(select_window, bg= "blue", fg=button_text_colour, text="Select Folder",
+        select_dir_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select Folder",
                                       command=folder_callback)
         select_file_button.place(x=file_button_x, y=file_and_folder_button_y)
         select_dir_button.place(x=folder_button_x, y=file_and_folder_button_y)
 
-        dnd_label = tk.Label(select_window, text = "...or drag and drop a folder or file(s) onto the box below")
-        list_box = tk.Listbox(select_window, height = 16, width = 60, bg = dnd_bg_colour, activestyle = "dotbox", font = "Helvetica")
+        dnd_label = tk.Label(select_window, text="...or drag and drop a folder or file(s) onto the box below")
+        list_box = tk.Listbox(select_window, height=16, width=60, bg=dnd_bg_colour, activestyle="dotbox", font="Helvetica")
         # register the listbox as a drop target
         list_box.drop_target_register(DND_FILES)
         confirmed_dropped_items = []
-
 
         def get_items_and_close_window_callback():
             nonlocal item_path
@@ -89,13 +107,12 @@ class GetPathFromUser:
             path = Path(confirmed_dropped_items[0])
             result["is_directory"] = path.is_dir()
 
-
         def list_dropped_items_callback(drop_event: TkinterDnD.DnDEvent):
             nonlocal confirmed_dropped_items
             # remove all items that were there previously
             confirmed_dropped_items = []
             list_box.delete(0, tk.END)
-            dropped_path_strings = drop_event.data.replace("{", "").replace("}", "") # files with spaces get wrapped in {}
+            dropped_path_strings = drop_event.data.replace("{", "").replace("}", "")  # files with spaces get wrapped in {}
 
             if platform == windows_os:
                 import re
@@ -105,7 +122,7 @@ class GetPathFromUser:
             else:
                 paths_with_safe_delimiter = dropped_path_strings.replace(" /", "<-DELIMITER->/")
                 dropped_items = paths_with_safe_delimiter.split("<-DELIMITER->")
-            correct_item_types_dropped = True # user must drop either files or a single folder
+            correct_item_types_dropped = True  # user must drop either files or a single folder
 
             for dropped_item_path in dropped_items:
                 path = Path(dropped_item_path)
@@ -126,26 +143,21 @@ class GetPathFromUser:
         list_box.place(x=10, y=140)
 
         confirm_dropped_items_button = tk.Button(
-            select_window, text ="Confirm dropped items", command = get_items_and_close_window_callback
+            select_window, text="Confirm dropped items", command=get_items_and_close_window_callback
         )
         confirm_dropped_items_button["state"] = "disabled"
         confirm_dropped_items_button.place(x=dnd_confirm_button_x, y=dnd_confirm_button_y)
 
         select_window.wait_window()
-        select_window.update_idletasks()  # Forces the window to close
 
         if len(item_path) == 0:
+            self.app.connection.close()
             print(f"{Fore.RED}Application closed.{Style.RESET_ALL}")
             exit()  # User has closed the application window
 
-        paths_as_string = ",\n  ".join(item_path)
-        paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
-        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
-        result["path"] = item_path
-        return result
+        select_window.update_idletasks()  # Forces the window to close
 
-
-    def cli_input(self) -> dict[str, tuple[str] | bool]:
+    def cli_input(self):
         path_types = {"f": "file", "d": "directory"}
         result = {}
         while True:
@@ -174,4 +186,22 @@ class GetPathFromUser:
             else:
                 print(f"{file_or_dir} is not a valid option.")
                 continue
-        return result
+
+        self.run_verification(result["path"], result)
+
+    def print_summary(self, summary: ResultSummary):
+        print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
+        file_or_files = "file was" if summary.files_processed == 1 else "files were"
+        print(f"{Fore.CYAN}{Style.BRIGHT}{summary.files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
+        preserved = summary.tally.get(True)
+        preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
+        print(f"""
+        Files in Preservica/DRI: {preserved_colour:}
+        Files not in Preservica/DRI: {Fore.RED}{summary.tally.get(False):}{Style.RESET_ALL}
+        """)
+
+        print(f"The full results can be found in a file called '{Fore.YELLOW}{summary.output_csv_name}{Style.RESET_ALL}'.\n")
+        if summary.all_file_errors:
+            print("These files encountered errors when trying to generate checksums:\n")
+            for file_error in summary.all_file_errors:
+                print(f"{Fore.RED}{file_error}{Style.RESET_ALL}")
