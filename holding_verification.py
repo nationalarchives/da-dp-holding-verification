@@ -24,7 +24,11 @@ def main():
     table_name = default_config["CHECKSUM_TABLE_NAME"]
 
     db_function = sqlite3.connect(db_file_name)
-    app_core = HoldingVerificationCore(db_function, table_name)
+    csv_file_name_prefix = input(
+        f"Add a title to be prepended to the CSV result's file name then '{Fore.YELLOW}Enter{Style.RESET_ALL}'"
+        f" or just press '{Fore.YELLOW}Enter{Style.RESET_ALL}' to skip: "
+    ).replace(" ", "_")
+    app_core = HoldingVerificationCore(db_function, table_name, csv_file_name_prefix)
     ui = HoldingVerificationUi(app_core)
     cli_or_gui = ui.prompt_use_gui()
 

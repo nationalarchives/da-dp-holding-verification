@@ -75,6 +75,19 @@ class TestHoldingVerification(unittest.TestCase):
             self.run_args(path, file_hash_name, all_file_errors, csv_writer, tally)
             return "sha256", [], {True: 1}
 
+    def test_get_csv_output_writer_and_file_name_should_append_csv_prefix_to_csv_name(self):
+        path = Path("test_files")
+        mock_db_connection = Mock()
+        csv_file, csv_writer, output_csv_name = HoldingVerificationCore(
+            mock_db_connection, self.table_name, "csv_prefix").get_csv_output_writer_and_file_name(
+            path, datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")
+        )
+        csv_name = csv_file.name
+        csv_file.close()
+
+        expected_csv_file_name = "csv_prefix_INGESTED_FILES_in_test_files_19-01-2038-03_14_08.csv"
+        os.remove(expected_csv_file_name)
+
     def test_get_csv_output_writer_and_file_name_should_return_expected_file_object_and_writer_and_name(self):
         path = Path("test_files")
         mock_db_connection = Mock()

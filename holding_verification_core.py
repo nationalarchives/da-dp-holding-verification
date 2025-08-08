@@ -35,10 +35,11 @@ class ResultSummary:
 
 
 class HoldingVerificationCore:
-    def __init__(self, connection, table_name):
+    def __init__(self, connection, table_name, csv_file_name_prefix=""):
         self.connection = connection
         self.cursor = self.connection.cursor()
         self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
+        self.csv_file_name_prefix = f"{csv_file_name_prefix}_" if csv_file_name_prefix else csv_file_name_prefix
 
     BUFFER_SIZE = 1_000_000
 
@@ -109,7 +110,7 @@ class HoldingVerificationCore:
         return starting_hash_name_for_next_file, all_file_errors, tally
 
     def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
-        output_csv_name = f"INGESTED_FILES_in_{path.name}_{date}.csv"
+        output_csv_name = f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}.csv"
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "Matching File Refs",
