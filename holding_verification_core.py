@@ -10,9 +10,9 @@ from helpers.helper import ColourCliText
 
 colour_text = ColourCliText()
 yellow = colour_text.yellow
-l_red = colour_text.l_red
+light_red = colour_text.light_red
 green = colour_text.green
-cyan = colour_text.cyan
+bright_cyan = colour_text.bright_cyan
 
 
 def check_db_exists(db_file_name, confirm_db_added_prompt=input):
@@ -93,7 +93,7 @@ class HoldingVerificationCore:
         (rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) = \
             self.get_rows_with_hash(path, file_hash_name)
 
-        checksum_found_colour = green(checksum_found) if checksum_found else l_red(checksum_found)
+        checksum_found_colour = green(checksum_found) if checksum_found else light_red(checksum_found)
         print(f"{yellow("File ingested")} = {checksum_found_colour}: {path}")
         tally[checksum_found] += 1
 
@@ -143,7 +143,7 @@ class HoldingVerificationCore:
                         assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
 
                     if files_processed % 100 == 0:
-                        print(f"\n{cyan(f"{files_processed:,} files processed")}\n")
+                        print(f"\n{bright_cyan(f"{files_processed:,} files processed")}\n")
 
         else:
             for path in paths:

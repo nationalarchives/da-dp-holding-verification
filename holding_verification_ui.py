@@ -8,7 +8,7 @@ yellow = colour_text.yellow
 red = colour_text.red
 green = colour_text.green
 magenta = colour_text.magenta
-cyan = colour_text.cyan
+bright_cyan = colour_text.bright_cyan
 
 class HoldingVerificationUi:
     def __init__(self, app: HoldingVerificationCore):
@@ -198,7 +198,7 @@ class HoldingVerificationUi:
     def print_summary(self, summary: ResultSummary):
         print(f"\n{green("Completed.")}\n\n")
         file_or_files = "file was" if summary.files_processed == 1 else "files were"
-        print(f"{cyan(f"{summary.files_processed:,}")} {file_or_files} processed:")
+        print(f"{bright_cyan(f"{summary.files_processed:,}")} {file_or_files} processed:")
         preserved = summary.tally.get(True)
         preserved_coloured = green(preserved) if preserved else magenta(preserved)
         print(f"""

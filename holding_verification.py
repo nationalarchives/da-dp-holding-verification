@@ -11,9 +11,9 @@ from helpers.helper import ColourCliText
 
 colour_text = ColourCliText()
 yellow = colour_text.yellow
-l_red = colour_text.l_red
+light_red = colour_text.light_red
 green = colour_text.green
-cyan = colour_text.cyan
+bright_cyan = colour_text.bright_cyan
 
 def main():
     # On Macs, the exe runs the script in the '_internal' dir so this changes it to the location of the executable
@@ -30,6 +30,7 @@ def main():
 
     db_function = sqlite3.connect(db_file_name)
     enter = yellow("Enter")
+    print(bright_cyan("Checksum DB Name:"))
     csv_file_name_prefix = input(
         f"Add a title to be prepended to the CSV result's file name then '{enter}' or just press '{enter}' to skip: "
     ).replace(" ", "_")
