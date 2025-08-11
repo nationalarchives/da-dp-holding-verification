@@ -33,7 +33,7 @@ def main():
     print(bright_cyan("Checksum DB Name:"))
     csv_file_name_prefix = input(
         f"Add a title to be prepended to the CSV result's file name then '{enter}' or just press '{enter}' to skip: "
-    ).replace(" ", "_")
+    ).strip().replace(" ", "_")
     app_core = HoldingVerificationCore(db_function, table_name, csv_file_name_prefix)
     ui = HoldingVerificationUi(app_core)
     cli_or_gui = ui.prompt_use_gui()
