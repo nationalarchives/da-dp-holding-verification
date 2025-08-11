@@ -6,11 +6,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from colorama import Fore
-from colorama import Style
-from colorama import init as colorama_init
+from helpers.helper import ColourCliText
 
-colorama_init()
+colour_text = ColourCliText()
+yellow = colour_text.yellow
+light_red = colour_text.light_red
+green = colour_text.green
+bright_cyan = colour_text.bright_cyan
 
 
 def check_db_exists(db_file_name, confirm_db_added_prompt=input):
@@ -35,10 +37,11 @@ class ResultSummary:
 
 
 class HoldingVerificationCore:
-    def __init__(self, connection, table_name):
+    def __init__(self, connection, table_name, csv_file_name_prefix=""):
         self.connection = connection
         self.cursor = self.connection.cursor()
         self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
+        self.csv_file_name_prefix = f"{csv_file_name_prefix}_" if csv_file_name_prefix else csv_file_name_prefix
 
     BUFFER_SIZE = 1_000_000
 
@@ -90,10 +93,8 @@ class HoldingVerificationCore:
         (rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) = \
             self.get_rows_with_hash(path, file_hash_name)
 
-        checksum_found_colour = f"{Fore.GREEN}{checksum_found}{Style.RESET_ALL}" if checksum_found else (
-            f"{Fore.LIGHTRED_EX}{checksum_found}{Style.RESET_ALL}"
-        )
-        print(f"{Fore.YELLOW}File ingested{Style.RESET_ALL} = {checksum_found_colour}: {path}")
+        checksum_found_colour = green(checksum_found) if checksum_found else light_red(checksum_found)
+        print(f"{yellow("File ingested")} = {checksum_found_colour}: {path}")
         tally[checksum_found] += 1
 
         file_refs = ", ".join((row[0] for row in rows_with_hash))
@@ -109,7 +110,7 @@ class HoldingVerificationCore:
         return starting_hash_name_for_next_file, all_file_errors, tally
 
     def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
-        output_csv_name = f"INGESTED_FILES_in_{path.name}_{date}.csv"
+        output_csv_name = f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}.csv"
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "Matching File Refs",
@@ -142,7 +143,7 @@ class HoldingVerificationCore:
                         assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
 
                     if files_processed % 100 == 0:
-                        print(f"\n{Fore.CYAN}{Style.BRIGHT}{files_processed:,} files processed{Style.RESET_ALL}\n")
+                        print(f"\n{bright_cyan(f"{files_processed:,} files processed")}\n")
 
         else:
             for path in paths:

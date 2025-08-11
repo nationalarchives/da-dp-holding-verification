@@ -1,23 +1,29 @@
 from pathlib import Path
-from colorama import Fore
-from colorama import Style
+from helpers.helper import ColourCliText
 
 from holding_verification_core import HoldingVerificationCore, ResultSummary
+
+colour_text = ColourCliText()
+yellow = colour_text.yellow
+red = colour_text.red
+green = colour_text.green
+magenta = colour_text.magenta
+bright_cyan = colour_text.bright_cyan
 
 class HoldingVerificationUi:
     def __init__(self, app: HoldingVerificationCore):
         self.app = app
 
     def prompt_use_gui(self, gui_or_cli_prompt=input) -> str:
+        enter = yellow("Enter")
         return gui_or_cli_prompt(
-            f"Press '{Fore.YELLOW}Enter{Style.RESET_ALL}' to use the GUI or type '{Fore.YELLOW}c{Style.RESET_ALL}'"
-            f" then 'Enter' for the CLI: "
+            f"Press '{enter}' to use the GUI or type '{yellow("c")}' then '{enter}' for the CLI: "
         ).strip().lower()
 
     def run_verification(self, item_path, result):
         paths_as_string = ",\n  ".join(item_path)
         paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
-        print(f"""\n{Fore.YELLOW}You've selected{Style.RESET_ALL}: {paths_as_list}\n\t""")
+        print(f"""\n{yellow("You've selected")}: {paths_as_list}\n\t""")
         result["path"] = item_path
 
         result_summary = self.app.start(result)
@@ -152,7 +158,7 @@ class HoldingVerificationUi:
 
         if len(item_path) == 0:
             self.app.connection.close()
-            print(f"{Fore.RED}Application closed.{Style.RESET_ALL}")
+            print(red("Application closed."))
             exit()  # User has closed the application window
 
         select_window.update_idletasks()  # Forces the window to close
@@ -164,7 +170,7 @@ class HoldingVerificationUi:
             file_or_dir = input("Would you like to look up a single file or directory? [f/d]: ").lower()
             if file_or_dir in path_types:
                 path_type = path_types[file_or_dir]
-                path_string = (input(f"Add the full {path_type} path here and press 'Enter': ")
+                path_string = (input(f"Add the full {path_type} path here and press '{yellow("Enter")}': ")
                                .strip()
                                .removeprefix('"')
                                .removesuffix('"')
@@ -190,18 +196,18 @@ class HoldingVerificationUi:
         self.run_verification(result["path"], result)
 
     def print_summary(self, summary: ResultSummary):
-        print(f"\n{Fore.GREEN}Completed.{Style.RESET_ALL}\n\n")
+        print(f"\n{green("Completed.")}\n\n")
         file_or_files = "file was" if summary.files_processed == 1 else "files were"
-        print(f"{Fore.CYAN}{Style.BRIGHT}{summary.files_processed:,}{Style.RESET_ALL} {file_or_files} processed:")
+        print(f"{bright_cyan(f"{summary.files_processed:,}")} {file_or_files} processed:")
         preserved = summary.tally.get(True)
-        preserved_colour = f"{Fore.GREEN}{preserved}{Style.RESET_ALL}" if preserved else f"{Fore.MAGENTA}{preserved}{Style.RESET_ALL}"
+        preserved_coloured = green(preserved) if preserved else magenta(preserved)
         print(f"""
-        Files in Preservica/DRI: {preserved_colour:}
-        Files not in Preservica/DRI: {Fore.RED}{summary.tally.get(False):}{Style.RESET_ALL}
+        Files in Preservica/DRI: {preserved_coloured:}
+        Files not in Preservica/DRI: {red(f"{summary.tally.get(False):}")}
         """)
 
-        print(f"The full results can be found in a file called '{Fore.YELLOW}{summary.output_csv_name}{Style.RESET_ALL}'.\n")
+        print(f"The full results can be found in a file called '{yellow(summary.output_csv_name)}'.\n")
         if summary.all_file_errors:
             print("These files encountered errors when trying to generate checksums:\n")
             for file_error in summary.all_file_errors:
-                print(f"{Fore.RED}{file_error}{Style.RESET_ALL}")
+                print(red(file_error))
