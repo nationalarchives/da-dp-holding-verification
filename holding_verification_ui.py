@@ -10,6 +10,7 @@ green = colour_text.green
 magenta = colour_text.magenta
 bright_cyan = colour_text.bright_cyan
 
+
 class HoldingVerificationUi:
     def __init__(self, app: HoldingVerificationCore):
         self.app = app
@@ -106,12 +107,14 @@ class HoldingVerificationUi:
         list_box.drop_target_register(DND_FILES)
         confirmed_dropped_items = []
 
-        def get_items_and_close_window_callback():
+        def get_items_and_run_verification_callback():
             nonlocal item_path
-            select_window.destroy()
             item_path = tuple(confirmed_dropped_items)
             path = Path(confirmed_dropped_items[0])
             result["is_directory"] = path.is_dir()
+
+            if item_path != ("",):  # shouldn't be possible as button is disabled until an item is dropped
+                self.run_verification(item_path, result)
 
         def list_dropped_items_callback(drop_event: TkinterDnD.DnDEvent):
             nonlocal confirmed_dropped_items
@@ -149,7 +152,7 @@ class HoldingVerificationUi:
         list_box.place(x=10, y=140)
 
         confirm_dropped_items_button = tk.Button(
-            select_window, text="Confirm dropped items", command=get_items_and_close_window_callback
+            select_window, text="Confirm dropped items", command=get_items_and_run_verification_callback
         )
         confirm_dropped_items_button["state"] = "disabled"
         confirm_dropped_items_button.place(x=dnd_confirm_button_x, y=dnd_confirm_button_y)

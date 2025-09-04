@@ -30,7 +30,6 @@ def main():
 
     db_function = sqlite3.connect(db_file_name)
     enter = yellow("Enter")
-    print(bright_cyan("Checksum DB Name:"))
     csv_file_name_prefix = input(
         f"Add a title to be prepended to the CSV result's file name then '{enter}' or just press '{enter}' to skip: "
     ).strip().replace(" ", "_")
