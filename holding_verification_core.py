@@ -110,7 +110,7 @@ class HoldingVerificationCore:
         return starting_hash_name_for_next_file, all_file_errors, tally
 
     def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
-        output_csv_name = f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}.csv"
+        output_csv_name = f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}_IN_PROGRESS.csv"
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "Matching File Refs",
@@ -153,5 +153,6 @@ class HoldingVerificationCore:
 
         csv_file.close()
         self.connection.commit()
+        os.rename(output_csv_name, output_csv_name.replace("_IN_PROGRESS", ""))
 
         return ResultSummary(files_processed, tally, all_file_errors, output_csv_name)

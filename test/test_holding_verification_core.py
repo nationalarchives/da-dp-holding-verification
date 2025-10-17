@@ -61,7 +61,8 @@ class TestHoldingVerification(unittest.TestCase):
             self.csv_file = Mock()
             self.csv_file.close = Mock()
             self.csv_writer = Mock(object_type="csv_writer")
-            self.output_csv_name = "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv"
+            self.output_csv_name = "INGESTED_FILES_in_testpath_19-01-2038-03_14_08_IN_PROGRESS.csv"
+            self.final_output_csv_name = self.output_csv_name.replace("_IN_PROGRESS", "")
             self.get_csv_output_writer_and_file_name_args = Mock()
             self.run_args = Mock()
 
@@ -69,6 +70,12 @@ class TestHoldingVerification(unittest.TestCase):
                                                 date: str = datetime.fromtimestamp(2147483648).strftime(
                                                     "%d-%m-%Y-%H_%M_%S")):
             self.get_csv_output_writer_and_file_name_args(dir_path, date)
+            if Path(self.final_output_csv_name).exists():
+                os.rename(self.final_output_csv_name, self.output_csv_name)
+            else:
+                with open(self.output_csv_name, "w") as csv_file:
+                    csv_file.write("content")
+
             return self.csv_file, self.csv_writer, self.output_csv_name
 
         def run(self, path, file_hash_name, all_file_errors: list[dict[str, str]], csv_writer, tally):
@@ -85,7 +92,7 @@ class TestHoldingVerification(unittest.TestCase):
         csv_name = csv_file.name
         csv_file.close()
 
-        expected_csv_file_name = "csv_prefix_INGESTED_FILES_in_test_files_19-01-2038-03_14_08.csv"
+        expected_csv_file_name = "csv_prefix_INGESTED_FILES_in_test_files_19-01-2038-03_14_08_IN_PROGRESS.csv"
         os.remove(expected_csv_file_name)
 
     def test_get_csv_output_writer_and_file_name_should_return_expected_file_object_and_writer_and_name(self):
@@ -98,12 +105,11 @@ class TestHoldingVerification(unittest.TestCase):
         csv_name = csv_file.name
         csv_file.close()
 
-        expected_csv_file_name = "INGESTED_FILES_in_test_files_19-01-2038-03_14_08.csv"
+        expected_csv_file_name = "INGESTED_FILES_in_test_files_19-01-2038-03_14_08_IN_PROGRESS.csv"
         self.assertEqual(expected_csv_file_name, csv_name)
         self.assertEqual(True, csv_writer.__str__().startswith("<_csv.writer object"))
         self.assertEqual(expected_csv_file_name, output_csv_name)
         self.assertEqual(os.path.exists(expected_csv_file_name), True)
-        os.remove(expected_csv_file_name)
 
     def test_get_checksum_for_file_should_not_call_update_if_file_has_no_bytes_to_read(self):
         mock_db_connection = Mock()
@@ -425,6 +431,7 @@ class TestHoldingVerification(unittest.TestCase):
             {"path": (self.test_file, self.empty_test_file), "is_directory": False},
             db_connection
         )
+
         mock_holding_verification.start(mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
@@ -449,6 +456,10 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
 
+        files_in_current_dir = os.listdir()
+        self.assertEqual(False, mock_holding_verification.output_csv_name in files_in_current_dir)
+        self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
+
     def test_main_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(
         self):
         db_connection = Mock()
@@ -457,6 +468,7 @@ class TestHoldingVerification(unittest.TestCase):
         mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name,
             {"path": (self.test_files_folder,), "is_directory": True}, db_connection
         )
+
         mock_holding_verification.start(mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
@@ -482,6 +494,9 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
 
+        files_in_current_dir = os.listdir()
+        self.assertEqual(False, mock_holding_verification.output_csv_name in files_in_current_dir)
+        self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
 
 if __name__ == "__main__":
     unittest.main()
