@@ -65,12 +65,15 @@ class TestHoldingVerification(unittest.TestCase):
             self.final_output_csv_name = self.output_csv_name.replace("_IN_PROGRESS", "")
             self.get_csv_output_writer_and_file_name_args = Mock()
             self.run_args = Mock()
+            self.print = Mock()
 
         def get_csv_output_writer_and_file_name(self, dir_path: Path,
                                                 date: str = datetime.fromtimestamp(2147483648).strftime(
                                                     "%d-%m-%Y-%H_%M_%S")):
             self.get_csv_output_writer_and_file_name_args(dir_path, date)
-            if Path(self.final_output_csv_name).exists():
+            if self.output_csv_name == "non-existent_file.csv":
+                pass
+            elif Path(self.final_output_csv_name).exists():
                 os.rename(self.final_output_csv_name, self.output_csv_name)
             else:
                 with open(self.output_csv_name, "w") as csv_file:
@@ -497,6 +500,20 @@ class TestHoldingVerification(unittest.TestCase):
         files_in_current_dir = os.listdir()
         self.assertEqual(False, mock_holding_verification.output_csv_name in files_in_current_dir)
         self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
+
+
+    def test_main_should_print_a_message_letting_users_know_that_processing_is_completed_but_file_not_renamed(self):
+        db_connection = Mock()
+        db_connection.commit = Mock()
+        db_connection.close = Mock()
+        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name, {"path": (
+            self.test_file, self.empty_test_file), "is_directory": False}, db_connection)
+        mock_holding_verification.output_csv_name = "non-existent_file.csv"
+        mock_holding_verification.start(mock_holding_verification.file_or_dir)
+        self.assertIn(
+            "WARNING: Processing completed but was unable to remove '_IN_PROGRESS' from the CSV file name, due to this error:",
+            mock_holding_verification.print.call_args_list[0].args[0]
+        )
 
 if __name__ == "__main__":
     unittest.main()

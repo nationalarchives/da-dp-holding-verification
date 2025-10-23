@@ -11,6 +11,7 @@ from helpers.helper import ColourCliText
 colour_text = ColourCliText()
 yellow = colour_text.yellow
 light_red = colour_text.light_red
+red = colour_text.red
 green = colour_text.green
 bright_cyan = colour_text.bright_cyan
 
@@ -43,6 +44,7 @@ class HoldingVerificationCore:
         self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
         self.IN_PROGRESS_SUFFIX = "_IN_PROGRESS"
         self.csv_file_name_prefix = f"{csv_file_name_prefix}_" if csv_file_name_prefix else csv_file_name_prefix
+        self.print = print
 
     BUFFER_SIZE = 1_000_000
 
@@ -155,6 +157,11 @@ class HoldingVerificationCore:
 
         csv_file.close()
         self.connection.commit()
-        os.rename(output_csv_name, output_csv_name.replace(self.IN_PROGRESS_SUFFIX, ""))
+        try:
+            os.rename(output_csv_name, output_csv_name.replace(self.IN_PROGRESS_SUFFIX, ""))
+        except Exception as e:
+            self.print(red("\n\nWARNING: Processing completed but was unable to remove '_IN_PROGRESS' from the " +
+                      f"CSV file name, due to this error: {e}")
+            )
 
         return ResultSummary(files_processed, tally, all_file_errors, output_csv_name)
