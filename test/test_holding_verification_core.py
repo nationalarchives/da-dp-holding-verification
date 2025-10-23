@@ -425,7 +425,7 @@ class TestHoldingVerification(unittest.TestCase):
                 )
         )
 
-    def test_main_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(
+    def test_start_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(
         self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -463,7 +463,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(False, mock_holding_verification.output_csv_name in files_in_current_dir)
         self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
 
-    def test_main_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(
+    def test_start_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(
         self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -502,7 +502,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
 
 
-    def test_main_should_print_a_message_letting_users_know_that_processing_is_completed_but_file_not_renamed(self):
+    def test_start_should_print_a_message_letting_users_know_that_processing_is_completed_but_file_not_renamed(self):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
