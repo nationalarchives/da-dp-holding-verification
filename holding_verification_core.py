@@ -41,6 +41,7 @@ class HoldingVerificationCore:
         self.connection = connection
         self.cursor = self.connection.cursor()
         self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
+        self.IN_PROGRESS_SUFFIX = "_IN_PROGRESS"
         self.csv_file_name_prefix = f"{csv_file_name_prefix}_" if csv_file_name_prefix else csv_file_name_prefix
 
     BUFFER_SIZE = 1_000_000
@@ -110,7 +111,8 @@ class HoldingVerificationCore:
         return starting_hash_name_for_next_file, all_file_errors, tally
 
     def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
-        output_csv_name = f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}_IN_PROGRESS.csv"
+        output_csv_name = (f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}"
+                           f"{self.IN_PROGRESS_SUFFIX}.csv")
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "Matching File Refs",
@@ -153,6 +155,6 @@ class HoldingVerificationCore:
 
         csv_file.close()
         self.connection.commit()
-        os.rename(output_csv_name, output_csv_name.replace("_IN_PROGRESS", ""))
+        os.rename(output_csv_name, output_csv_name.replace(self.IN_PROGRESS_SUFFIX, ""))
 
         return ResultSummary(files_processed, tally, all_file_errors, output_csv_name)
