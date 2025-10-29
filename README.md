@@ -87,6 +87,8 @@ Interface) CLI.
          file/folder
 3. What you've selected will appear in the command line window and the processing of the file(s) will start
 4. The GUI will remain open until you close it and the CLI will remain open until you enter "q" and press "Enter"
+5. Whilst processing, "IN_PROGRESS" will be appended to the output CSV's name and then removed at the end; this is
+   so that if the app stops running, for whatever reason, the user will know whether it completed or not
 
 ### Running holding_verification_core.py tests
 
