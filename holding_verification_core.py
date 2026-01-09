@@ -68,32 +68,43 @@ class HoldingVerificationCore:
         results_with_hash = self.cursor.fetchall()
         return results_with_hash
 
-    def get_rows_with_hash(self, path: str, file_hash_name: str):
+    def get_rows_with_hash(self, path: str, presumed_hash_name: str):
+        sha256_name = "sha256"
         #  MD5 is 2nd since really old files (which we have a lot of) are MD5 so looking for them first is optimal
-        hashes_to_lookup = {"sha256": hashlib.sha256, "md5": hashlib.md5, "sha1": hashlib.sha1}
+        hashes_to_lookup = {sha256_name: hashlib.sha256, "md5": hashlib.md5, "sha1": hashlib.sha1}
         errors = dict()
-        next_hash_name = file_hash_name
+        actual_hash_name = ""
         checksum_found = False
         rows_with_hash = []
+        sha256_hash = "" # We need to get this, regardless of whether the file has matched with another hash
 
-        while not checksum_found and len(hashes_to_lookup) > 0:
-            next_hash_name = file_hash_name if file_hash_name in hashes_to_lookup else list(hashes_to_lookup.keys())[0]
-            hash_function = hashes_to_lookup.pop(next_hash_name)
+        presumed_hash = {presumed_hash_name: hashes_to_lookup[presumed_hash_name]} if presumed_hash_name in hashes_to_lookup else {}
+        hashes_to_lookup =  presumed_hash | hashes_to_lookup
 
+        for hash_name, hash_function in hashes_to_lookup.items():
             (checksum, errors) = self.get_checksum_for_file(path, hash_function())
+            if hash_name == sha256_name:
+                sha256_hash = checksum
+                if checksum_found: # An md5 or sha1 may have matched previously so don't need to look in DB again
+                    break
             rows_with_hash = self.find_checksum_in_db(checksum)
             checksum_found = len(rows_with_hash) > 0
-            if checksum_found:
-                hashes_to_lookup = dict()
 
-        return rows_with_hash, checksum_found, errors, next_hash_name
+            if checksum_found:
+                actual_hash_name = hash_name
+                if sha256_hash:
+                    break
+        else:
+            actual_hash_name = ""
+
+        return sha256_hash, rows_with_hash, checksum_found, errors, actual_hash_name
 
     def run(self, path, file_hash_name, all_file_errors: list[dict[str, str]], csv_writer, tally):
         file_size = Path(path).stat().st_size
         if file_size > 500_000_000:
             print(f"Currently processing a file that is {file_size:,} bytes; might take a while...")
 
-        (rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) = \
+        (sha256_hash, rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) = \
             self.get_rows_with_hash(path, file_hash_name)
 
         checksum_found_colour = green(checksum_found) if checksum_found else light_red(checksum_found)
@@ -102,9 +113,10 @@ class HoldingVerificationCore:
 
         file_refs = ", ".join((row[0] for row in rows_with_hash))
         checksum_value = "".join({row[1] for row in rows_with_hash})
-        checksum_algo_name = next_hash_name if checksum_found else ""
+        checksum_algo_name = next_hash_name
 
-        csv_writer.writerow((path, file_size, checksum_found, file_refs, checksum_algo_name, checksum_value))
+        row = (path, file_size, checksum_found, sha256_hash, file_refs, checksum_algo_name, checksum_value)
+        csv_writer.writerow(row)
 
         if errors_generating_checksum:
             all_file_errors.append(errors_generating_checksum)
@@ -117,8 +129,8 @@ class HoldingVerificationCore:
                            f"{self.IN_PROGRESS_SUFFIX}.csv")
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "Matching File Refs",
-                             "Algorithm Name", "Algorithm Hash"))
+        csv_writer.writerow(("Local File Path", "File Size (Bytes)", "In Preservica/DRI", "SHA256 Hash",
+                             "Matching File Refs", "Matching Algorithm Name", "Matching Algorithm Hash"))
         return csv_file, csv_writer, output_csv_name
 
 
