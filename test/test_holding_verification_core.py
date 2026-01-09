@@ -22,11 +22,10 @@ class TestHoldingVerification(unittest.TestCase):
 
     class HVWithMockedChecksumMethods(HoldingVerificationCore):
         def __init__(self, table_name, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
-                     checksum_in_db_return_vals: tuple[list[list[str]]] = (),
-                     checksum_for_file_return_vals: tuple[str] = ("sha256Checksum123", "md5Checksum234",
-                                                                  "sha1Checksum345")):
+                     checksum_in_db_return_vals: tuple[list[list[str]]] = ()):
             super().__init__(Mock(), table_name)
-            self.checksum_for_file = iter(checksum_for_file_return_vals)
+
+            self.checksum_for_file = {"sha256": "sha256Checksum123", "md5":"md5Checksum234", "sha1":"sha1Checksum345"}
             self.errors_when_getting_checksum_for_file = iter(checksum_for_file_return_errors)
             self.checksum_in_db = iter(checksum_in_db_return_vals)
             self.checksum_for_file_calls = 0
@@ -35,7 +34,7 @@ class TestHoldingVerification(unittest.TestCase):
 
         def get_checksum_for_file(self, file_path: str, hash_func) -> tuple[str, dict[str, str]]:
             self.checksum_for_file_calls += 1
-            return next(self.checksum_for_file), next(self.errors_when_getting_checksum_for_file)
+            return self.checksum_for_file[hash_func.name], next(self.errors_when_getting_checksum_for_file)
 
         def find_checksum_in_db(self, file_hash: str) -> list[list[str]]:
             self.checksum_in_db_calls += 1
@@ -243,8 +242,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_1X_if_it_starts_with_md5_and_md5_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}, {}), ([["2", "md5Checksum234", "md5"]],),
-            ("md5Checksum234", "sha256Checksum123","sha1Checksum345")
+            ({}, {}, {}), ([["2", "md5Checksum234", "md5"]],)
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "md5"
@@ -261,8 +259,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_2X_if_it_starts_with_md5_but_sha256_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}), ([], [["1", "sha256Checksum123", "sha256"]]),
-            ("md5Checksum234", "sha256Checksum123", "sha1Checksum345")
+            ({}, {}), ([], [["1", "sha256Checksum123", "sha256"]])
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "md5"
@@ -279,8 +276,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_md5_but_sha1_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}, {}), ([], [], [["3", "sha1Checksum345", "sha1"]]),
-            ("md5Checksum234", "sha256Checksum123", "sha1Checksum345")
+            ({}, {}, {}), ([], [], [["3", "sha1Checksum345", "sha1"]])
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) =  mock_holding_verification.get_rows_with_hash(
             self.test_file, "md5"
@@ -297,8 +293,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_md5_but_no_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}, {}), ([], [], []),
-            ("md5Checksum234", "sha256Checksum123", "sha1Checksum345")
+            ({}, {}, {}), ([], [], [])
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "md5"
@@ -315,8 +310,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_1X_if_it_starts_with_sha1_and_sha1_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}, {}), ([["3", "sha1Checksum345", "sha1"]],),
-            ("md5Checksum234", "sha256Checksum123","sha1Checksum345")
+            ({}, {}, {}), ([["3", "sha1Checksum345", "sha1"]],)
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "sha1"
@@ -333,8 +327,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_2X_if_it_starts_with_sha1_but_sha256_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}), ([], [["1", "sha256Checksum123", "sha256"]]),
-            ("sha1Checksum345", "sha256Checksum123", "md5Checksum234")
+            ({}, {}), ([], [["1", "sha256Checksum123", "sha256"]])
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "sha1"
@@ -351,8 +344,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_sha1_but_md5_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}, {}), ([], [], [["2", "md5Checksum234", "md5"]]),
-            ("sha1Checksum345", "sha256Checksum123", "md5Checksum234")
+            ({}, {}, {}), ([], [], [["2", "md5Checksum234", "md5"]])
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "sha1"
@@ -369,8 +361,7 @@ class TestHoldingVerification(unittest.TestCase):
 
     def test_get_rows_with_hash_should_call_other_methods_3X_if_it_starts_with_sha1_but_no_checksum_found(self):
         mock_holding_verification = self.HVWithMockedChecksumMethods(self.table_name,
-            ({}, {}, {}), ([], [], []),
-            ("sha1Checksum345", "sha256Checksum123", "md5Checksum234")
+            ({}, {}, {}), ([], [], [])
         )
         (sha256_hash, rows_with_hash, checksum_found, errors, next_hash_name) = mock_holding_verification.get_rows_with_hash(
             self.test_file, "sha1"
