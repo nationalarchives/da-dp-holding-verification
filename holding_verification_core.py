@@ -104,7 +104,7 @@ class HoldingVerificationCore:
         if file_size > 500_000_000:
             print(f"Currently processing a file that is {file_size:,} bytes; might take a while...")
 
-        (sha256_hash, rows_with_hash, checksum_found, errors_generating_checksum, next_hash_name) = \
+        (sha256_hash, rows_with_hash, checksum_found, errors_generating_checksum, checksum_found_name) = \
             self.get_rows_with_hash(path, file_hash_name)
 
         checksum_found_colour = green(checksum_found) if checksum_found else light_red(checksum_found)
@@ -113,15 +113,14 @@ class HoldingVerificationCore:
 
         file_refs = ", ".join((row[0] for row in rows_with_hash))
         checksum_value = "".join({row[1] for row in rows_with_hash})
-        checksum_algo_name = next_hash_name
 
-        row = (path, file_size, checksum_found, sha256_hash, file_refs, checksum_algo_name, checksum_value)
+        row = (path, file_size, checksum_found, sha256_hash, file_refs, checksum_found_name, checksum_value)
         csv_writer.writerow(row)
 
         if errors_generating_checksum:
             all_file_errors.append(errors_generating_checksum)
 
-        starting_hash_name_for_next_file = checksum_algo_name if checksum_found else file_hash_name
+        starting_hash_name_for_next_file = checksum_found_name if checksum_found else file_hash_name
         return starting_hash_name_for_next_file, all_file_errors, tally
 
     def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
