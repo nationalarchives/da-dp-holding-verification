@@ -168,11 +168,12 @@ class HoldingVerificationCore:
 
         csv_file.close()
         self.connection.commit()
+        final_output_csv_name = output_csv_name.replace(self.IN_PROGRESS_SUFFIX, "")
         try:
-            os.rename(output_csv_name, output_csv_name.replace(self.IN_PROGRESS_SUFFIX, ""))
+            os.rename(output_csv_name, final_output_csv_name)
         except Exception as e:
             self.print(red("\n\nWARNING: Processing completed but was unable to remove '_IN_PROGRESS' from the " +
                       f"CSV file name, due to this error: {e}")
             )
 
-        return ResultSummary(files_processed, tally, all_file_errors, output_csv_name)
+        return ResultSummary(files_processed, tally, all_file_errors, final_output_csv_name)
