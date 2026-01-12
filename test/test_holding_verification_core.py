@@ -31,13 +31,11 @@ class TestHoldingVerification(unittest.TestCase):
     table_name = config["DEFAULT"]["CHECKSUM_TABLE_NAME"]
 
     class HVWithMockedChecksumMethods(HoldingVerificationCore):
-        def __init__(self, table_name,
-                     checksum_in_db_return_vals: tuple[list[list[str]]] = (),
-                     checksum_for_file_return_errors: tuple[dict[str, str]] = ({}, {}, {})):
+        def __init__(self, table_name, checksum_in_db_return_vals: tuple[list[list[str]]] = ()):
             super().__init__(Mock(), table_name)
 
             self.checksum_for_file = {"sha256": "sha256Checksum123", "md5": "md5Checksum234", "sha1": "sha1Checksum345"}
-            self.errors_when_getting_checksum_for_file = iter(checksum_for_file_return_errors)
+            self.errors_when_getting_checksum_for_file = iter(({}, {}, {}))
             self.checksum_in_db = iter(checksum_in_db_return_vals)
             self.checksum_for_file_calls = 0
             self.checksum_in_db_calls = 0
