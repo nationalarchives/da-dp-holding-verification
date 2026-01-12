@@ -1,4 +1,5 @@
 import configparser
+import csv
 from collections import defaultdict
 from datetime import datetime
 import os
@@ -7,6 +8,15 @@ import unittest
 from unittest.mock import Mock
 
 from holding_verification_core import HoldingVerificationCore, check_db_exists
+
+
+def read_csv_header(csv_name):
+    with open(csv_name, "r", newline="") as csv_file:
+        dict_reader = csv.DictReader(csv_file)
+        return dict_reader.fieldnames
+
+expected_csv_header = ["Local File Path", "File Size (Bytes)", "In Preservica/DRI", "SHA256 Hash", "Matching File Refs",
+                       "Matching Algorithm Name", "Matching Algorithm Hash"]
 
 
 class TestHoldingVerification(unittest.TestCase):
@@ -98,6 +108,10 @@ class TestHoldingVerification(unittest.TestCase):
         csv_file.close()
 
         expected_csv_file_name = "csv_prefix_INGESTED_FILES_in_test_files_19-01-2038-03_14_08_IN_PROGRESS.csv"
+        self.assertEqual(expected_csv_file_name, csv_name)
+        self.assertEqual(True, Path(csv_name).is_file())
+        actual_csv_header = read_csv_header(csv_name)
+        self.assertEqual(expected_csv_header, actual_csv_header)
         os.remove(expected_csv_file_name)
 
     def test_get_csv_output_writer_and_file_name_should_return_expected_file_object_and_writer_and_name(self):
@@ -115,6 +129,8 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(True, csv_writer.__str__().startswith("<_csv.writer object"))
         self.assertEqual(expected_csv_file_name, output_csv_name)
         self.assertEqual(os.path.exists(expected_csv_file_name), True)
+        actual_csv_header = read_csv_header(csv_name)
+        self.assertEqual(expected_csv_header, actual_csv_header)
 
     def test_get_checksum_for_file_should_not_call_update_if_file_has_no_bytes_to_read(self):
         mock_db_connection = Mock()
