@@ -17,6 +17,15 @@ class TestHoldingVerification(unittest.TestCase):
         self.test_files_folder = os.path.normpath("test/test_files")
         self.test_files_folder2 = os.path.normpath("test/test_files2")
         self.test_files_folder3 = os.path.normpath("test/test_files3")
+        self.output_csvs_dir = "test/output_csvs"
+
+    @classmethod
+    def tearDownClass(cls):
+        output_csvs_dir = "test/output_csvs"
+        if Path(output_csvs_dir).is_dir():
+            for file in Path(output_csvs_dir).iterdir():
+                if file.is_file():
+                    file.unlink()
 
     config = configparser.ConfigParser()
     config.read("config.ini")
@@ -75,7 +84,7 @@ class TestHoldingVerification(unittest.TestCase):
         def get_csv_output_writer_and_file_name(self, dirs: str,
                                                 date: str = datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")):
 
-            output_csv_name = f"INGESTED_FILES_in_{dirs}_{date}_IN_PROGRESS.csv"
+            output_csv_name = f"test/output_csvs/INGESTED_FILES_in_{dirs}_{date}_IN_PROGRESS.csv"
             final_output_csv_name = output_csv_name.replace("_IN_PROGRESS", "")
             self.get_csv_output_writer_and_file_name_args(dirs, date)
 
@@ -470,7 +479,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
 
-        files_in_current_dir = os.listdir()
+        files_in_current_dir = os.listdir(self.output_csvs_dir)
         self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
         self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
@@ -511,7 +520,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, mock_holding_verification.csv_file.close.call_count)
         self.assertEqual(1, db_connection.cursor.call_count)
 
-        files_in_current_dir = os.listdir()
+        files_in_current_dir = os.listdir(self.output_csvs_dir)
 
         self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
         self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
@@ -539,7 +548,7 @@ class TestHoldingVerification(unittest.TestCase):
 
         self.assertEqual(6, mock_holding_verification.run_args.call_count)
 
-        files_in_current_dir = os.listdir()
+        files_in_current_dir = os.listdir(self.output_csvs_dir)
         self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
         self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
@@ -565,10 +574,10 @@ class TestHoldingVerification(unittest.TestCase):
 
         self.assertEqual(5, mock_holding_verification.run_args.call_count)
 
-        files_in_current_dir = os.listdir()
+        files_in_current_dir = os.listdir(self.output_csvs_dir)
+
         self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
         self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
-
 
     def test_start_should_print_a_message_letting_users_know_that_processing_is_completed_but_file_not_renamed(self):
         db_connection = Mock()
