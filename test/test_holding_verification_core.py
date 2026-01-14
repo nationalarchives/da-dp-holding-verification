@@ -15,10 +15,15 @@ class TestHoldingVerification(unittest.TestCase):
         self.empty_test_file = os.path.normpath("test/test_files/emptyTestFile.txt")
         self.empty_test_db = os.path.normpath("test/test_files/test_checksums_of_files_in_dri.testdb")
         self.test_files_folder = os.path.normpath("test/test_files")
+        self.test_files_folder2 = os.path.normpath("test/test_files2")
+        self.test_files_folder3 = os.path.normpath("test/test_files3")
 
     config = configparser.ConfigParser()
     config.read("config.ini")
     table_name = config["DEFAULT"]["CHECKSUM_TABLE_NAME"]
+
+    def expected_csv_name(self, expected_file_name_dirs, expected_date, string_to_append: str = "_IN_PROGRESS"):
+        return f"INGESTED_FILES_in_{expected_file_name_dirs}_{expected_date}{string_to_append}.csv"
 
     class HVWithMockedChecksumMethods(HoldingVerificationCore):
         def __init__(self, table_name, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
@@ -55,42 +60,45 @@ class TestHoldingVerification(unittest.TestCase):
             return self.rows_with_hash, self.checksum_found, self.errors_generating_checksum, self.next_hash_name
 
     class HVWithMockedUserPromptCsvAndRunMethods(HoldingVerificationCore):
-        def __init__(self, table_name, file_or_dir: dict[str, tuple[str] | bool], db_connection):
+        def __init__(self, table_name, file_or_dir: dict[str, tuple[str] | bool], db_connection, create_csv: bool =
+        True):
             super().__init__(db_connection, table_name)
             self.file_or_dir = file_or_dir
             self.csv_file = Mock()
             self.csv_file.close = Mock()
             self.csv_writer = Mock(object_type="csv_writer")
-            self.output_csv_name = "INGESTED_FILES_in_testpath_19-01-2038-03_14_08_IN_PROGRESS.csv"
-            self.final_output_csv_name = self.output_csv_name.replace("_IN_PROGRESS", "")
             self.get_csv_output_writer_and_file_name_args = Mock()
             self.run_args = Mock()
             self.print = Mock()
+            self.create_csv = create_csv
 
-        def get_csv_output_writer_and_file_name(self, dir_path: Path,
-                                                date: str = datetime.fromtimestamp(2147483648).strftime(
-                                                    "%d-%m-%Y-%H_%M_%S")):
-            self.get_csv_output_writer_and_file_name_args(dir_path, date)
-            if self.output_csv_name == "non-existent_file.csv":
+        def get_csv_output_writer_and_file_name(self, dirs: str,
+                                                date: str = datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")):
+
+            output_csv_name = f"INGESTED_FILES_in_{dirs}_{date}_IN_PROGRESS.csv"
+            final_output_csv_name = output_csv_name.replace("_IN_PROGRESS", "")
+            self.get_csv_output_writer_and_file_name_args(dirs, date)
+
+            if not self.create_csv:
                 pass
-            elif Path(self.final_output_csv_name).exists():
-                os.rename(self.final_output_csv_name, self.output_csv_name)
+            elif Path(final_output_csv_name).exists():
+                os.rename(final_output_csv_name, output_csv_name)
             else:
-                with open(self.output_csv_name, "w") as csv_file:
+                with open(output_csv_name, "w") as csv_file:
                     csv_file.write("content")
 
-            return self.csv_file, self.csv_writer, self.output_csv_name
+            return self.csv_file, self.csv_writer, output_csv_name
 
         def run(self, path, file_hash_name, all_file_errors: list[dict[str, str]], csv_writer, tally):
             self.run_args(path, file_hash_name, all_file_errors, csv_writer, tally)
             return "sha256", [], {True: 1}
 
     def test_get_csv_output_writer_and_file_name_should_append_csv_prefix_to_csv_name(self):
-        path = Path("test_files")
+        dirs = "test_files"
         mock_db_connection = Mock()
         csv_file, csv_writer, output_csv_name = HoldingVerificationCore(
             mock_db_connection, self.table_name, "csv_prefix").get_csv_output_writer_and_file_name(
-            path, datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")
+            dirs, datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")
         )
         csv_name = csv_file.name
         csv_file.close()
@@ -99,7 +107,7 @@ class TestHoldingVerification(unittest.TestCase):
         os.remove(expected_csv_file_name)
 
     def test_get_csv_output_writer_and_file_name_should_return_expected_file_object_and_writer_and_name(self):
-        path = Path("test_files")
+        path = "test_files"
         mock_db_connection = Mock()
         csv_file, csv_writer, output_csv_name = HoldingVerificationCore(
             mock_db_connection, self.table_name).get_csv_output_writer_and_file_name(
@@ -431,16 +439,19 @@ class TestHoldingVerification(unittest.TestCase):
         db_connection.commit = Mock()
         db_connection.close = Mock()
         mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name,
-            {"path": (self.test_file, self.empty_test_file), "is_directory": False},
+            {"paths": (self.test_file, self.empty_test_file), "is_directory": False},
             db_connection
         )
 
         mock_holding_verification.start(mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
-        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
-        self.assertEqual(True, path_arg.match(self.test_files_folder))
-        self.assertEqual("19-01-2038-03_14_08", date_arg)
+        ((dirs, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
+
+        expected_file_name_dirs = "test_files"
+        expected_date = "19-01-2038-03_14_08"
+        self.assertEqual(expected_file_name_dirs, dirs)
+        self.assertEqual(expected_date, date_arg)
 
         self.assertEqual(2, mock_holding_verification.run_args.call_count)
         actual_and_expected_args = zip(
@@ -460,8 +471,8 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, db_connection.cursor.call_count)
 
         files_in_current_dir = os.listdir()
-        self.assertEqual(False, mock_holding_verification.output_csv_name in files_in_current_dir)
-        self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
+        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
     def test_start_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(
         self):
@@ -469,15 +480,18 @@ class TestHoldingVerification(unittest.TestCase):
         db_connection.commit = Mock()
         db_connection.close = Mock()
         mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name,
-            {"path": (self.test_files_folder,), "is_directory": True}, db_connection
+            {"paths": (self.test_files_folder,), "is_directory": True}, db_connection
         )
 
         mock_holding_verification.start(mock_holding_verification.file_or_dir)
 
         self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
-        ((path_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
-        self.assertEqual(True, Path(path_arg).match(self.test_files_folder))
-        self.assertEqual("19-01-2038-03_14_08", date_arg)
+        ((dirs, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
+
+        expected_file_name_dirs = "test_files"
+        expected_date = "19-01-2038-03_14_08"
+        self.assertEqual(expected_file_name_dirs, dirs)
+        self.assertEqual(expected_date, date_arg)
 
         self.assertEqual(3, mock_holding_verification.run_args.call_count)
         actual_and_expected_args = zip(
@@ -498,17 +512,72 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, db_connection.cursor.call_count)
 
         files_in_current_dir = os.listdir()
-        self.assertEqual(False, mock_holding_verification.output_csv_name in files_in_current_dir)
-        self.assertEqual(True, "INGESTED_FILES_in_testpath_19-01-2038-03_14_08.csv" in files_in_current_dir)
+
+        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
+
+    def test_start_should_call_run_method_6x_and_other_methods_once_with_correct_args_and_generate_correct_csv_name_if_3_folders_were_selected(
+        self):
+        db_connection = Mock()
+        db_connection.commit = Mock()
+        db_connection.close = Mock()
+        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
+            self.table_name, {"paths": (self.test_files_folder, self.test_files_folder2, self.test_files_folder3),
+                              "is_directory": True}, db_connection
+        )
+
+        mock_holding_verification.start(mock_holding_verification.file_or_dir)
+
+        self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
+        ((dir_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
+
+        expected_file_name_dirs = "test_files_AND_test_files2_AND_1_more_folder"
+        expected_date = "19-01-2038-03_14_08"
+
+        self.assertEqual(expected_file_name_dirs, dir_arg)
+        self.assertEqual(expected_date, date_arg)
+
+        self.assertEqual(6, mock_holding_verification.run_args.call_count)
+
+        files_in_current_dir = os.listdir()
+        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
+
+    def test_start_should_call_run_method_5x_and_other_methods_once_with_correct_args_and_generate_correct_csv_name_if_2_folders_were_selected(
+        self):
+        db_connection = Mock()
+        db_connection.commit = Mock()
+        db_connection.close = Mock()
+        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(
+            self.table_name, {"paths": (self.test_files_folder, self.test_files_folder2), "is_directory": True}, db_connection
+        )
+
+        mock_holding_verification.start(mock_holding_verification.file_or_dir)
+
+        self.assertEqual(1, mock_holding_verification.get_csv_output_writer_and_file_name_args.call_count)
+        ((dir_arg, date_arg), _) = mock_holding_verification.get_csv_output_writer_and_file_name_args.call_args
+
+        expected_file_name_dirs = "test_files_AND_test_files2"
+        expected_date = "19-01-2038-03_14_08"
+
+        self.assertEqual(expected_file_name_dirs, dir_arg)
+        self.assertEqual(expected_date, date_arg)
+
+        self.assertEqual(5, mock_holding_verification.run_args.call_count)
+
+        files_in_current_dir = os.listdir()
+        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
 
     def test_start_should_print_a_message_letting_users_know_that_processing_is_completed_but_file_not_renamed(self):
         db_connection = Mock()
         db_connection.commit = Mock()
         db_connection.close = Mock()
-        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name, {"path": (
-            self.test_file, self.empty_test_file), "is_directory": False}, db_connection)
-        mock_holding_verification.output_csv_name = "non-existent_file.csv"
+        mock_holding_verification = self.HVWithMockedUserPromptCsvAndRunMethods(self.table_name, {"paths": (
+            self.test_file, self.empty_test_file), "is_directory": False}, db_connection, False
+        )
+
         mock_holding_verification.start(mock_holding_verification.file_or_dir)
         self.assertIn(
             "WARNING: Processing completed but was unable to remove '_IN_PROGRESS' from the CSV file name, due to this error:",
