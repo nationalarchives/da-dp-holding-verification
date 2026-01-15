@@ -17,7 +17,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.test_files_folder = os.path.normpath("test/test_files")
         self.test_files_folder2 = os.path.normpath("test/test_files2")
         self.test_files_folder3 = os.path.normpath("test/test_files3")
-        self.output_csvs_dir = "test/output_csvs"
+        self.output_csvs_dir = os.path.normpath("test/output_csvs")
 
     @classmethod
     def tearDownClass(cls):
@@ -84,7 +84,7 @@ class TestHoldingVerification(unittest.TestCase):
         def get_csv_output_writer_and_file_name(self, dirs: str,
                                                 date: str = datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")):
 
-            output_csv_name = f"test/output_csvs/INGESTED_FILES_in_{dirs}_{date}_IN_PROGRESS.csv"
+            output_csv_name = os.path.normpath(f"test/output_csvs/INGESTED_FILES_in_{dirs}_{date}_IN_PROGRESS.csv")
             final_output_csv_name = output_csv_name.replace("_IN_PROGRESS", "")
             self.get_csv_output_writer_and_file_name_args(dirs, date)
 
