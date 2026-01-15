@@ -122,9 +122,9 @@ class HoldingVerificationCore:
         return csv_file, csv_writer, output_csv_name
 
 
-    def start(self, file_or_dir) -> ResultSummary:
-        is_directory = file_or_dir["is_directory"]
-        paths = file_or_dir["paths"]
+    def start(self, selected_items) -> ResultSummary:
+        is_directory = selected_items["is_directory"]
+        paths = selected_items["paths"]
         path_of_an_item_path = Path(paths[0])  # assuming that files and folders are in the same folder for now
         dir_for_csv_name = ""
 
