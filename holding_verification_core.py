@@ -123,14 +123,11 @@ class HoldingVerificationCore:
 
 
     def start(self, selected_items) -> ResultSummary:
-        is_directory = selected_items["is_directory"]
+        are_directories = selected_items["are_directories"]
         paths = selected_items["paths"]
-        path_of_an_item_path = Path(paths[0])  # assuming that files and folders are in the same folder for now
         dir_for_csv_name = ""
 
-        if path_of_an_item_path.is_file():
-            dir_for_csv_name = path_of_an_item_path.parent.name
-        else:
+        if are_directories:
             dir_names = [Path(path).name for path in paths]
             dir_names_length = len(dir_names)
             first_2_dirs = dir_names[0:2]
@@ -139,6 +136,9 @@ class HoldingVerificationCore:
                 if additional_folders > 0 else ""
             dir_names_joined = "_AND_".join(first_2_dirs) + more_files
             dir_for_csv_name = dir_names_joined
+        else:
+            path_of_first_item = Path(paths[0])  # assuming that files are in the same folder for now
+            dir_for_csv_name = path_of_first_item.parent.name
 
         assumed_hash_algo = "sha256"  # SHA256 because newer files have SHA256 hashes
         all_file_errors: list[dict[str, str]] = []
@@ -147,7 +147,7 @@ class HoldingVerificationCore:
 
         csv_file, csv_writer, output_csv_name = self.get_csv_output_writer_and_file_name(dir_for_csv_name)
 
-        if is_directory:
+        if are_directories:
             for path in paths:
                 for direct_dir, _, files_in_dir in Path(path).walk():
                     if files_in_dir:  # for each directory, there could be just directories inside

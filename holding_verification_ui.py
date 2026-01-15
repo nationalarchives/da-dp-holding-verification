@@ -80,7 +80,7 @@ class HoldingVerificationUi:
 
             item_path = askopenfilenames(parent=select_window, initialdir="", title='Select File(s)')
             if item_path != "":
-                selected_items["is_directory"] = False
+                selected_items["are_directories"] = False
                 self.run_verification(item_path, selected_items)
 
         def folder_callback() -> None:
@@ -91,7 +91,7 @@ class HoldingVerificationUi:
             item_path = folder_path
 
             if item_path != ("",):
-                selected_items["is_directory"] = True
+                selected_items["are_directories"] = True
                 self.run_verification(item_path, selected_items)
 
         select_file_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select File(s)",
@@ -111,7 +111,7 @@ class HoldingVerificationUi:
             nonlocal item_path
             item_path = tuple(confirmed_dropped_items)
             path = Path(confirmed_dropped_items[0])
-            selected_items["is_directory"] = path.is_dir()
+            selected_items["are_directories"] = path.is_dir()
 
             if item_path != ("",):  # shouldn't be possible as button is disabled until an item is dropped
                 self.run_verification(item_path, selected_items)
@@ -193,7 +193,7 @@ class HoldingVerificationUi:
                         f"\nYou want to look up a {path_type} but did not provide a path for a {path_type}. Starting again...")
                 else:
                     selected_items["paths"] = (path_string,)
-                    selected_items["is_directory"] = is_directory
+                    selected_items["are_directories"] = is_directory
                     break
             else:
                 print(f"{file_or_dir} is not a valid option.")
