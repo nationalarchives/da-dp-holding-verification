@@ -125,7 +125,6 @@ class HoldingVerificationCore:
     def start(self, selected_items) -> ResultSummary:
         are_directories = selected_items["are_directories"]
         paths = selected_items["paths"]
-        dir_for_csv_name = ""
 
         if are_directories:
             dir_names = [Path(path).name for path in paths]

@@ -9,6 +9,10 @@ from unittest.mock import Mock
 from holding_verification_core import HoldingVerificationCore, check_db_exists
 
 
+def expected_csv_name(expected_file_name_dirs, expected_date, string_to_append: str = "_IN_PROGRESS"):
+    return f"INGESTED_FILES_in_{expected_file_name_dirs}_{expected_date}{string_to_append}.csv"
+
+
 class TestHoldingVerification(unittest.TestCase):
     def setUp(self):
         self.test_file = os.path.normpath("test/test_files/testFile.txt")
@@ -31,12 +35,9 @@ class TestHoldingVerification(unittest.TestCase):
     config.read("config.ini")
     table_name = config["DEFAULT"]["CHECKSUM_TABLE_NAME"]
 
-    def expected_csv_name(self, expected_file_name_dirs, expected_date, string_to_append: str = "_IN_PROGRESS"):
-        return f"INGESTED_FILES_in_{expected_file_name_dirs}_{expected_date}{string_to_append}.csv"
-
     class HVWithMockedChecksumMethods(HoldingVerificationCore):
-        def __init__(self, table_name, checksum_for_file_return_errors: tuple[dict[str, str]] = (dict(),),
-                     checksum_in_db_return_vals: tuple[list[list[str]]] = (),
+        def __init__(self, table_name, checksum_for_file_return_errors: tuple[dict[str, str], ...] = (dict(),),
+                     checksum_in_db_return_vals: tuple[list[list[str]], ...] = (),
                      checksum_for_file_return_vals: tuple[str] = ("sha256Checksum123", "md5Checksum234",
                                                                   "sha1Checksum345")):
             super().__init__(Mock(), table_name)
@@ -442,7 +443,7 @@ class TestHoldingVerification(unittest.TestCase):
                 )
         )
 
-    def test_start_should_call_run_method_2x_and_other_methods_once_with_correct_args_if_2_files_have_been_passed_in(
+    def test_start_should_call_run_method_2x_and_other_methods_once_if_2_files(
         self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -480,10 +481,10 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(1, db_connection.cursor.call_count)
 
         files_in_current_dir = os.listdir(self.output_csvs_dir)
-        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
-        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
+        self.assertEqual(False, expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
-    def test_start_should_call_run_method_3x_and_other_methods_once_with_correct_args_if_a_folder_with_3_files_have_been_passed_in(
+    def test_start_should_call_run_method_3x_and_other_methods_once_if_a_folder_with_3_files(
         self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -522,10 +523,10 @@ class TestHoldingVerification(unittest.TestCase):
 
         files_in_current_dir = os.listdir(self.output_csvs_dir)
 
-        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
-        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
+        self.assertEqual(False, expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
-    def test_start_should_call_run_method_6x_and_other_methods_once_with_correct_args_and_generate_correct_csv_name_if_3_folders_were_selected(
+    def test_start_should_call_run_method_6x_and_other_methods_once_and_generate_correct_csv_name_if_3_folders(
         self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -549,10 +550,10 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(6, mock_holding_verification.run_args.call_count)
 
         files_in_current_dir = os.listdir(self.output_csvs_dir)
-        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
-        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
+        self.assertEqual(False, expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
-    def test_start_should_call_run_method_5x_and_other_methods_once_with_correct_args_and_generate_correct_csv_name_if_2_folders_were_selected(
+    def test_start_should_call_run_method_5x_and_other_methods_once_and_generate_correct_csv_name_if_2_folders(
         self):
         db_connection = Mock()
         db_connection.commit = Mock()
@@ -576,8 +577,8 @@ class TestHoldingVerification(unittest.TestCase):
 
         files_in_current_dir = os.listdir(self.output_csvs_dir)
 
-        self.assertEqual(False, self.expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
-        self.assertEqual(True, self.expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
+        self.assertEqual(False, expected_csv_name(expected_file_name_dirs, expected_date) in files_in_current_dir)
+        self.assertEqual(True, expected_csv_name(expected_file_name_dirs, expected_date, "") in files_in_current_dir)
 
     def test_start_should_print_a_message_letting_users_know_that_processing_is_completed_but_file_not_renamed(self):
         db_connection = Mock()
