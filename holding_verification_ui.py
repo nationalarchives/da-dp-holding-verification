@@ -21,13 +21,13 @@ class HoldingVerificationUi:
             f"Press '{enter}' to use the GUI or type '{yellow("c")}' then '{enter}' for the CLI: "
         ).strip().lower()
 
-    def run_verification(self, item_path, result):
-        paths_as_string = ",\n  ".join(item_path)
+    def run_verification(self, item_paths, selected_items):
+        paths_as_string = ",\n  ".join(item_paths)
         paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
         print(f"""\n{yellow("You've selected")}: {paths_as_list}\n\t""")
-        result["path"] = item_path
+        selected_items["paths"] = item_paths
 
-        result_summary = self.app.start(result)
+        result_summary = self.app.start(selected_items)
         self.print_summary(result_summary)
 
     def open_select_window(self):
@@ -40,7 +40,7 @@ class HoldingVerificationUi:
         select_window.title("Holding Verification: Select Item")
         select_window.eval('tk::PlaceWindow . center')
         item_path = tuple()
-        result = {}
+        selected_items = {}
         windows_os = "win32"  # Windows 64-bit also falls under "win32"
 
         if platform == windows_os:
@@ -80,8 +80,8 @@ class HoldingVerificationUi:
 
             item_path = askopenfilenames(parent=select_window, initialdir="", title='Select File(s)')
             if item_path != "":
-                result["is_directory"] = False
-                self.run_verification(item_path, result)
+                selected_items["are_directories"] = False
+                self.run_verification(item_path, selected_items)
 
         def folder_callback() -> None:
             nonlocal item_path
@@ -91,8 +91,8 @@ class HoldingVerificationUi:
             item_path = folder_path
 
             if item_path != ("",):
-                result["is_directory"] = True
-                self.run_verification(item_path, result)
+                selected_items["are_directories"] = True
+                self.run_verification(item_path, selected_items)
 
         select_file_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
@@ -101,7 +101,7 @@ class HoldingVerificationUi:
         select_file_button.place(x=file_button_x, y=file_and_folder_button_y)
         select_dir_button.place(x=folder_button_x, y=file_and_folder_button_y)
 
-        dnd_label = tk.Label(select_window, text="...or drag and drop a folder or file(s) onto the box below")
+        dnd_label = tk.Label(select_window, text="...or drag and drop folders or files onto the box below")
         list_box = tk.Listbox(select_window, height=16, width=60, bg=dnd_bg_colour, activestyle="dotbox", font="Helvetica")
         # register the listbox as a drop target
         list_box.drop_target_register(DND_FILES)
@@ -111,10 +111,10 @@ class HoldingVerificationUi:
             nonlocal item_path
             item_path = tuple(confirmed_dropped_items)
             path = Path(confirmed_dropped_items[0])
-            result["is_directory"] = path.is_dir()
+            selected_items["are_directories"] = path.is_dir()
 
             if item_path != ("",):  # shouldn't be possible as button is disabled until an item is dropped
-                self.run_verification(item_path, result)
+                self.run_verification(item_path, selected_items)
 
         def list_dropped_items_callback(drop_event: TkinterDnD.DnDEvent):
             nonlocal confirmed_dropped_items
@@ -131,16 +131,19 @@ class HoldingVerificationUi:
             else:
                 paths_with_safe_delimiter = dropped_path_strings.replace(" /", "<-DELIMITER->/")
                 dropped_items = paths_with_safe_delimiter.split("<-DELIMITER->")
-            correct_item_types_dropped = True  # user must drop either files or a single folder
+
+            item_types_dropped = set()  # user must drop either files or folders
+            only_one_item_type_dropped = True
 
             for dropped_item_path in dropped_items:
                 path = Path(dropped_item_path)
                 is_directory = path.is_dir()
-                if is_directory and len(dropped_items) > 1:
-                    correct_item_types_dropped = False
+                item_types_dropped.add("folder") if is_directory else item_types_dropped.add("file")
+                if len(item_types_dropped) > 1:
+                    only_one_item_type_dropped = False
                     break
 
-            if correct_item_types_dropped:
+            if only_one_item_type_dropped:
                 for dropped_item in dropped_items:
                     list_box.insert(tk.END, dropped_item)
 
@@ -168,7 +171,7 @@ class HoldingVerificationUi:
 
     def cli_input(self):
         path_types = {"f": "file", "d": "directory"}
-        result = {}
+        selected_items = {}
         while True:
             file_or_dir = input("Would you like to look up a single file or directory? [f/d]: ").lower()
             if file_or_dir in path_types:
@@ -189,14 +192,14 @@ class HoldingVerificationUi:
                     print(
                         f"\nYou want to look up a {path_type} but did not provide a path for a {path_type}. Starting again...")
                 else:
-                    result["path"] = (path_string,)
-                    result["is_directory"] = is_directory
+                    selected_items["paths"] = (path_string,)
+                    selected_items["are_directories"] = is_directory
                     break
             else:
                 print(f"{file_or_dir} is not a valid option.")
                 continue
 
-        self.run_verification(result["path"], result)
+        self.run_verification(selected_items["paths"], selected_items)
 
     def print_summary(self, summary: ResultSummary):
         print(f"\n{green("Completed.")}\n\n")

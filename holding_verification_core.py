@@ -123,8 +123,8 @@ class HoldingVerificationCore:
         starting_hash_name_for_next_file = checksum_found_name if checksum_found else file_hash_name
         return starting_hash_name_for_next_file, all_file_errors, tally
 
-    def get_csv_output_writer_and_file_name(self, path: Path, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
-        output_csv_name = (f"{self.csv_file_name_prefix}INGESTED_FILES_in_{path.name}_{date}"
+    def get_csv_output_writer_and_file_name(self, dirs: str, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
+        output_csv_name = (f"{self.csv_file_name_prefix}INGESTED_FILES_in_{dirs}_{date}"
                            f"{self.IN_PROGRESS_SUFFIX}.csv")
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
         csv_writer = csv.writer(csv_file)
@@ -133,32 +133,44 @@ class HoldingVerificationCore:
         return csv_file, csv_writer, output_csv_name
 
 
-    def start(self, file_or_dir) -> ResultSummary:
-        is_directory = file_or_dir["is_directory"]
-        paths = file_or_dir["path"]
-        path_of_an_item_path = Path(paths[0])  # assuming that files are in the same folder for now
-        dir_path: Path = path_of_an_item_path.parent if path_of_an_item_path.is_file() else path_of_an_item_path
+    def start(self, selected_items) -> ResultSummary:
+        are_directories = selected_items["are_directories"]
+        paths = selected_items["paths"]
+
+        if are_directories:
+            dir_names = [Path(path).name for path in paths]
+            dir_names_length = len(dir_names)
+            first_2_dirs = dir_names[0:2]
+            additional_folders = dir_names_length - len(first_2_dirs)
+            more_files = f"_AND_{additional_folders}_more_folder{"s" if additional_folders > 1 else ""}" \
+                if additional_folders > 0 else ""
+            dir_names_joined = "_AND_".join(first_2_dirs) + more_files
+            dir_for_csv_name = dir_names_joined
+        else:
+            path_of_first_item = Path(paths[0])  # assuming that files are in the same folder for now
+            dir_for_csv_name = path_of_first_item.parent.name
 
         assumed_hash_algo = "sha256"  # SHA256 because newer files have SHA256 hashes
         all_file_errors: list[dict[str, str]] = []
         tally: dict[bool, int] = defaultdict(int)
         files_processed = 0
 
-        csv_file, csv_writer, output_csv_name = self.get_csv_output_writer_and_file_name(dir_path)
+        csv_file, csv_writer, output_csv_name = self.get_csv_output_writer_and_file_name(dir_for_csv_name)
 
-        if is_directory:
-            for direct_dir, _, files_in_dir in Path(dir_path).walk():
-                if files_in_dir:  # for each directory, there could be just directories inside
-                    for file_name in files_in_dir:
-                        item_path = f"{direct_dir / file_name}"
-                        files_processed += 1
-                        (hash_name, all_file_errors, tally) = self.run(
-                            str(item_path), assumed_hash_algo, all_file_errors, csv_writer, tally
-                        )
-                        assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
+        if are_directories:
+            for path in paths:
+                for direct_dir, _, files_in_dir in Path(path).walk():
+                    if files_in_dir:  # for each directory, there could be just directories inside
+                        for file_name in files_in_dir:
+                            item_path = f"{direct_dir / file_name}"
+                            files_processed += 1
+                            (hash_name, all_file_errors, tally) = self.run(
+                                str(item_path), assumed_hash_algo, all_file_errors, csv_writer, tally
+                            )
+                            assumed_hash_algo = hash_name  # Assume next file uses same algo in order to reduce file hashing
 
-                    if files_processed % 100 == 0:
-                        print(f"\n{bright_cyan(f"{files_processed:,} files processed")}\n")
+                        if files_processed % 100 == 0:
+                            print(f"\n{bright_cyan(f"{files_processed:,} files processed")}\n")
 
         else:
             for path in paths:
