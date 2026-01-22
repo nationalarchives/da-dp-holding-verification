@@ -57,8 +57,8 @@ Which, with the env variables: CHECKSUM_DB_NAME, CHECKSUM_TABLE_NAME and CSV_FIL
             of the file that preceded it
       2. If found, it will return the file reference(s) associated with the checksum, fixity value, algorithm name 
          from the DB
-   4. It will write the information obtained from the DB as well as the path, file size and `True` or `False` value 
-      for whether the checksum was found
+   4. It will write the: path, file size, a `True` or `False` value for whether the checksum was found, the SHA256 of
+      the file as well as the information obtained from the DB to a CSV file
 
 ### 3. holding_verification_ui.py
 
