@@ -17,9 +17,7 @@ jobs:
         with:
           python-version: '3.13'
       - id: next-tag
-        uses: nationalarchives/dr2-github-actions/.github/actions/get-next-version@main
-        with:
-          repo-name: da-dp-holding-verification
+        run: echo next-version=$(curl -s $GITHUB_API_URL/repos/nationalarchives/da-dp-holding-verification/tags | jq -r '.[0].name' | awk -F. -v OFS=. '{ $3++; print }') >> "$GITHUB_OUTPUT"
       - name: Upgrade pip & create exe file
         run: |
           python -m pip install --upgrade pip
