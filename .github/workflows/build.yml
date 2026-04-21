@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".github/**"
+      - "README.md"
+      - "test/**"
 
 permissions:
   id-token: write
