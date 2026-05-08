@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - ".github/**"
       - "README.md"
+      - ".gitignore"
+      - "config.ini"
       - "test/**"
 
 permissions:
