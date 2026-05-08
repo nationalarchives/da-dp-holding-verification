@@ -23,17 +23,28 @@ jobs:
       - id: next-tag
         shell: python
         run: |
-          import json, os, urllib.request
+          import json, os, urllib.request, configparser
 
           url = f"{os.environ['GITHUB_API_URL']}/repos/nationalarchives/da-dp-holding-verification/tags"
           headers = {"Accept": "application/vnd.github+json", "Authorization": f"Bearer {os.getenv("GH_TOKEN")}"}
 
-          tag_name = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=headers)))[0]["name"]
-          split_tags = tag_name.split(".")
-          new_tag = ".".join(split_tags[:-1] + [str(int(split_tags[-1]) + 1)])
+          tag_num = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=headers)))[0]["name"][1:]
+          current_version_num = tag_num.replace(".", "").lstrip("0")
 
-          with open(os.environ["GITHUB_OUTPUT"], 'a') as go:
-              go.write(f"next-version={new_tag}\n")
+          config = configparser.ConfigParser()
+          config.read("config.ini")
+          default_config = config["DEFAULT"]
+          config_app_version = default_config["APP_VERSION"]
+          app_version_as_num = int(config_app_version.replace(".", ""))
+
+          if app_version_as_num > int(current_version_num):
+              with open(os.environ["GITHUB_OUTPUT"], 'a') as go:
+                  go.write(f"next-version=v{config_app_version}\n")
+          else:
+            raise Exception(
+                f"New app version defined in 'config.ini' {config_app_version} " +
+                f"is not higher than the current {tag_num} version"
+            )
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Upgrade pip & create exe file
