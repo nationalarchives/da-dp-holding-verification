@@ -1,3 +1,4 @@
+import configparser
 from pathlib import Path
 from helpers.helper import ColourCliText
 
@@ -36,8 +37,11 @@ class HoldingVerificationUi:
         from tkinter.filedialog import askdirectory, askopenfilenames
         from tkinterdnd2 import DND_FILES, TkinterDnD
         select_window = TkinterDnD.Tk()  # notice - use this instead of tk.Tk()
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+        default_config = config["DEFAULT"]
 
-        select_window.title("Holding Verification: Select Item")
+        select_window.title("CheckMate: Select Item")
         select_window.eval('tk::PlaceWindow . center')
         item_path = tuple()
         selected_items = {}
@@ -52,6 +56,8 @@ class HoldingVerificationUi:
             dnd_bg_colour = "white"
             dnd_confirm_button_x = 419
             dnd_confirm_button_y = 455
+            version_label_x = 8
+            version_label_y = 455
 
         else:
             window_dims = "500x450"
@@ -62,6 +68,8 @@ class HoldingVerificationUi:
             dnd_bg_colour = "grey"
             dnd_confirm_button_x = 319
             dnd_confirm_button_y = 405
+            version_label_x = 8
+            version_label_y = 405
 
         select_window.geometry(window_dims)
         file_and_folder_button_y = 50
@@ -94,9 +102,9 @@ class HoldingVerificationUi:
                 selected_items["are_directories"] = True
                 self.run_verification(item_path, selected_items)
 
-        select_file_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select File(s)",
+        select_file_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
-        select_dir_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select Folder",
+        select_dir_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select Folder",
                                       command=folder_callback)
         select_file_button.place(x=file_button_x, y=file_and_folder_button_y)
         select_dir_button.place(x=folder_button_x, y=file_and_folder_button_y)
@@ -105,6 +113,7 @@ class HoldingVerificationUi:
         list_box = tk.Listbox(select_window, height=16, width=60, bg=dnd_bg_colour, activestyle="dotbox", font="Helvetica")
         # register the listbox as a drop target
         list_box.drop_target_register(DND_FILES)
+        version_label = tk.Label(select_window, text=f"v{default_config["APP_VERSION"]}")
         confirmed_dropped_items = []
 
         def get_items_and_run_verification_callback():
@@ -159,6 +168,8 @@ class HoldingVerificationUi:
         )
         confirm_dropped_items_button["state"] = "disabled"
         confirm_dropped_items_button.place(x=dnd_confirm_button_x, y=dnd_confirm_button_y)
+
+        version_label.place(x=version_label_x, y=version_label_y)
 
         select_window.wait_window()
 

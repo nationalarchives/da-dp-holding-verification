@@ -23,7 +23,8 @@ def check_db_exists(db_file_name, confirm_db_added_prompt=input):
             break
         else:
             response = confirm_db_added_prompt(
-                f"'{db_file_name}' is missing from the directory '{os.getcwd()}'; add it a press 'Enter' to continue"
+                f"'{red(db_file_name)}' is missing from the directory '{os.getcwd()}'; add it and press '" +
+                f"{yellow("Enter")}' to continue"
             )
             if isinstance(response, bool):  # In tests, confirm_db_added_prompt returns Boolean in order to break loop
                 db_file_does_not_exist = response

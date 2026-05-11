@@ -464,7 +464,7 @@ class TestHoldingVerification(unittest.TestCase):
         self.assertEqual(3, confirm_prompt.call_count)
         self.assertEqual(
             True,
-            all("'non_existent_db_file_name' is missing from the directory '" in input_arg[0][0] for input_arg in
+            all("'\x1b[31mnon_existent_db_file_name\x1b[0m' is missing from the directory '" in input_arg[0][0] for input_arg in
                 confirm_prompt_input_args
                 )
         )
