@@ -102,9 +102,9 @@ class HoldingVerificationUi:
                 selected_items["are_directories"] = True
                 self.run_verification(item_path, selected_items)
 
-        select_file_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select File(s)",
+        select_file_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
-        select_dir_button = tk.Button(select_window, bg="blue", fg=button_text_colour, text="Select Folder",
+        select_dir_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select Folder",
                                       command=folder_callback)
         select_file_button.place(x=file_button_x, y=file_and_folder_button_y)
         select_dir_button.place(x=folder_button_x, y=file_and_folder_button_y)
