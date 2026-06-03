@@ -31,16 +31,22 @@ jobs:
           headers = {"Accept": "application/vnd.github+json", "Authorization": f"Bearer {os.getenv("GH_TOKEN")}"}
 
           tag_num = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=headers)))[0]["name"][1:]
-          current_version_num = tag_num.replace(".", "").lstrip("0")
+          current_version_split = tag_num.split(".")
 
           config = configparser.ConfigParser()
           config.read("config.ini")
           default_config = config["DEFAULT"]
           config_app_version = default_config["APP_VERSION"]
-          app_version_as_num = int(config_app_version.replace(".", ""))
+          app_version_split = config_app_version.split(".")
+          new_version_is_higher = False
 
-          if app_version_as_num > int(current_version_num):
-              with open(os.environ["GITHUB_OUTPUT"], 'a') as go:
+          for a_num, c_num in zip(app_version_split, current_version_split):
+            if int(a_num) > int(c_num):
+              new_version_is_higher = True
+              break
+
+          if new_version_is_higher:
+              with open(os.environ["GITHUB_OUTPUT"], "a") as go:
                   go.write(f"next-version=v{config_app_version}\n")
           else:
             raise Exception(
