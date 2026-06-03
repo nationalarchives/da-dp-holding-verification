@@ -23,6 +23,7 @@ class HoldingVerificationUi:
         ).strip().lower()
 
     def run_verification(self, item_paths, selected_items):
+        self.app.csv_file_name_prefix = self.app.csv_file_name_prefix.strip().replace(" ", "_")
         paths_as_string = ",\n  ".join(item_paths)
         paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
         print(f"""\n{yellow("You've selected")}: {paths_as_list}\n\t""")
@@ -49,11 +50,13 @@ class HoldingVerificationUi:
 
         if platform == windows_os:
             window_dims = "565x490"
+            box_bg_colour = "white"
+            box_text_colour = "black"
             button_text_colour = "white"
             file_button_x = 180
             folder_button_x = 300
             dnd_label_x = 130
-            dnd_bg_colour = "white"
+            dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 419
             dnd_confirm_button_y = 455
             version_label_x = 8
@@ -61,19 +64,24 @@ class HoldingVerificationUi:
 
         else:
             window_dims = "500x450"
+            box_bg_colour = "grey"
+            box_text_colour = "white"
             button_text_colour = "black"
             file_button_x = 130
             folder_button_x = 250
             dnd_label_x = 80
-            dnd_bg_colour = "grey"
+            dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 319
             dnd_confirm_button_y = 405
             version_label_x = 8
             version_label_y = 405
 
         select_window.geometry(window_dims)
-        file_and_folder_button_y = 50
+        file_and_folder_button_y = 70
         dnd_label_y = 100
+
+        def set_prepended_csv_title():
+            self.app.csv_file_name_prefix = prepend_title_box.get("1.0", tk.END)
 
         def clear_list_box():
             nonlocal confirmed_dropped_items
@@ -89,6 +97,7 @@ class HoldingVerificationUi:
             item_path = askopenfilenames(parent=select_window, initialdir="", title='Select File(s)')
             if item_path != "":
                 selected_items["are_directories"] = False
+                set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
 
         def folder_callback() -> None:
@@ -100,7 +109,19 @@ class HoldingVerificationUi:
 
             if item_path != ("",):
                 selected_items["are_directories"] = True
+                set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
+
+        prepend_title_label = tk.Label(select_window, text="Title to be prepended to the CSV results' file name:")
+        prepend_title_label.place(x=9, y=5)
+
+        prepend_title_box = tk.Text(select_window, height=1.3, width=37, fg=box_text_colour, bg=box_bg_colour)
+        prepend_title_box.place(x=10, y=30)
+        csv_name_text = tk.Label(select_window, text="_INGESTED_FILES_in_{folder}.csv")
+        csv_name_text.place(x=276, y=30)
+        canvas = tk.Canvas(select_window, width=500, height=1)
+        canvas.place(x=0, y=60)
+        canvas.create_line(0, 0, 400, 200, fill="white", width=500, dash=5)
 
         select_file_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
@@ -123,6 +144,7 @@ class HoldingVerificationUi:
             selected_items["are_directories"] = path.is_dir()
 
             if item_path != ("",):  # shouldn't be possible as button is disabled until an item is dropped
+                set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
 
         def list_dropped_items_callback(drop_event: TkinterDnD.DnDEvent):
@@ -181,13 +203,17 @@ class HoldingVerificationUi:
         select_window.update_idletasks()  # Forces the window to close
 
     def cli_input(self):
+        enter = yellow("Enter")
         path_types = {"f": "file", "d": "directory"}
         selected_items = {}
+        self.app.csv_file_name_prefix = input(
+            f"Add a title to be prepended to the CSV result's file name then '{enter}' or just press '{enter}' to skip: "
+        )
         while True:
-            file_or_dir = input("Would you like to look up a single file or directory? [f/d]: ").lower()
+            file_or_dir = input("\nWould you like to look up a single file or directory? [f/d]: ").lower()
             if file_or_dir in path_types:
                 path_type = path_types[file_or_dir]
-                path_string = (input(f"Add the full {path_type} path here and press '{yellow("Enter")}': ")
+                path_string = (input(f"Add the full {path_type} path here and press '{enter}': ")
                                .strip()
                                .removeprefix('"')
                                .removesuffix('"')

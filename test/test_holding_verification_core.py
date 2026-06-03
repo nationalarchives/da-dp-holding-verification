@@ -114,8 +114,9 @@ class TestHoldingVerification(unittest.TestCase):
     def test_get_csv_output_writer_and_file_name_should_append_csv_prefix_to_csv_name(self):
         dirs = "test_files"
         mock_db_connection = Mock()
-        csv_file, csv_writer, output_csv_name = HoldingVerificationCore(
-            mock_db_connection, self.table_name, "csv_prefix").get_csv_output_writer_and_file_name(
+        core = HoldingVerificationCore(mock_db_connection, self.table_name)
+        core.csv_file_name_prefix = "csv_prefix"
+        csv_file, csv_writer, output_csv_name = core.get_csv_output_writer_and_file_name(
             dirs, datetime.fromtimestamp(2147483648).strftime("%d-%m-%Y-%H_%M_%S")
         )
         csv_name = csv_file.name

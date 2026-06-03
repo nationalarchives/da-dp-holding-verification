@@ -39,12 +39,12 @@ class ResultSummary:
 
 
 class HoldingVerificationCore:
-    def __init__(self, connection, table_name, csv_file_name_prefix=""):
+    def __init__(self, connection, table_name):
         self.connection = connection
         self.cursor = self.connection.cursor()
         self.select_statement = f"""SELECT file_ref, fixity_value, algorithm_name FROM {table_name} WHERE "fixity_value" """
         self.IN_PROGRESS_SUFFIX = "_IN_PROGRESS"
-        self.csv_file_name_prefix = f"{csv_file_name_prefix}_" if csv_file_name_prefix else csv_file_name_prefix
+        self.csv_file_name_prefix = ""
         self.print = print
 
     BUFFER_SIZE = 1_000_000
@@ -125,6 +125,7 @@ class HoldingVerificationCore:
         return starting_hash_name_for_next_file, all_file_errors, tally
 
     def get_csv_output_writer_and_file_name(self, dirs: str, date: str = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")):
+        self.csv_file_name_prefix = f"{self.csv_file_name_prefix}_" if self.csv_file_name_prefix else ""
         output_csv_name = (f"{self.csv_file_name_prefix}INGESTED_FILES_in_{dirs}_{date}"
                            f"{self.IN_PROGRESS_SUFFIX}.csv")
         csv_file = open(output_csv_name, "w", newline="", encoding="utf-8")
