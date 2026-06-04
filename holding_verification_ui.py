@@ -49,9 +49,11 @@ class HoldingVerificationUi:
         windows_os = "win32"  # Windows 64-bit also falls under "win32"
 
         if platform == windows_os:
+            content_width = 560
             window_dims = "565x490"
             box_bg_colour = "white"
             box_text_colour = "black"
+            line_colour = "gray"
             button_text_colour = "white"
             file_button_x = 180
             folder_button_x = 300
@@ -63,9 +65,11 @@ class HoldingVerificationUi:
             version_label_y = 455
 
         else:
-            window_dims = "500x450"
+            content_width = 495
+            window_dims = f"500x450"
             box_bg_colour = "grey"
             box_text_colour = "white"
+            line_colour = "white"
             button_text_colour = "black"
             file_button_x = 130
             folder_button_x = 250
@@ -116,12 +120,12 @@ class HoldingVerificationUi:
         prepend_title_label.place(x=9, y=5)
 
         prepend_title_box = tk.Text(select_window, height=1.3, width=37, fg=box_text_colour, bg=box_bg_colour)
-        prepend_title_box.place(x=10, y=30)
+        prepend_title_box.place(x=13, y=30)
         csv_name_text = tk.Label(select_window, text="_INGESTED_FILES_in_{folder}.csv")
         csv_name_text.place(x=276, y=30)
-        canvas = tk.Canvas(select_window, width=500, height=1)
-        canvas.place(x=0, y=60)
-        canvas.create_line(0, 0, 400, 200, fill="white", width=500, dash=5)
+        canvas = tk.Canvas(select_window, width=content_width, height=1)
+        canvas.place(x=0, y=59)
+        canvas.create_line(0, 0, content_width, 200, fill=line_colour, width=content_width, dash=5)
 
         select_file_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
