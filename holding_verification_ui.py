@@ -60,9 +60,8 @@ class HoldingVerificationUi:
             dnd_label_x = 130
             dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 419
-            dnd_confirm_button_y = 475
+            version_label_y = dnd_confirm_button_y = 475
             version_label_x = 8
-            version_label_y = 475
 
         else:
             content_width = 495
@@ -76,14 +75,10 @@ class HoldingVerificationUi:
             dnd_label_x = 80
             dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 319
-            dnd_confirm_button_y = 425
+            version_label_y = dnd_confirm_button_y = 425
             version_label_x = 8
-            version_label_y = 425
 
         select_window.geometry(window_dims)
-        file_and_folder_label_y = 70
-        file_and_folder_button_y = file_and_folder_label_y + 25
-        dnd_label_y = file_and_folder_button_y + 35
 
         def set_prepended_csv_title():
             self.app.csv_file_name_prefix = prepend_title_box.get("1.0", tk.END)
@@ -117,16 +112,21 @@ class HoldingVerificationUi:
                 set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
 
+        prepend_title_label_y = 5
         prepend_title_label = tk.Label(select_window, text="Title to be prepended to the CSV results' file name:")
-        prepend_title_label.place(x=9, y=5)
+        prepend_title_label.place(x=9, y=prepend_title_label_y)
 
         prepend_title_box = tk.Text(select_window, height=1.3, width=37, fg=box_text_colour, bg=box_bg_colour)
-        prepend_title_box.place(x=13, y=30)
+        title_box_y = prepend_title_label_y + 25
+        prepend_title_box.place(x=13, y=title_box_y)
         csv_name_text = tk.Label(select_window, text="_INGESTED_FILES_in_{folder}.csv")
-        csv_name_text.place(x=276, y=30)
+        csv_name_text.place(x=276, y=title_box_y)
         canvas = tk.Canvas(select_window, width=content_width, height=1)
         canvas.place(x=0, y=59)
         canvas.create_line(0, 0, content_width, 200, fill=line_colour, width=content_width, dash=5)
+
+        file_and_folder_label_y = 70
+        file_and_folder_button_y = file_and_folder_label_y + 25
 
         file_and_folder_label = tk.Label(
             select_window,
@@ -193,6 +193,7 @@ class HoldingVerificationUi:
             confirm_dropped_items_button["state"] = "active"
 
         list_box.dnd_bind('<<Drop>>', list_dropped_items_callback)
+        dnd_label_y = file_and_folder_button_y + 35
         dnd_label.place(x=dnd_label_x, y=dnd_label_y)
         list_box.place(x=10, y=160)
 
