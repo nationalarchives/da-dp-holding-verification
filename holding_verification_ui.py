@@ -50,7 +50,7 @@ class HoldingVerificationUi:
 
         if platform == windows_os:
             content_width = 560
-            window_dims = "565x490"
+            window_dims = "565x510"
             box_bg_colour = "white"
             box_text_colour = "black"
             line_colour = "gray"
@@ -60,13 +60,13 @@ class HoldingVerificationUi:
             dnd_label_x = 130
             dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 419
-            dnd_confirm_button_y = 455
+            dnd_confirm_button_y = 475
             version_label_x = 8
-            version_label_y = 455
+            version_label_y = 475
 
         else:
             content_width = 495
-            window_dims = f"500x450"
+            window_dims = f"500x470"
             box_bg_colour = "grey"
             box_text_colour = "white"
             line_colour = "white"
@@ -76,13 +76,14 @@ class HoldingVerificationUi:
             dnd_label_x = 80
             dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 319
-            dnd_confirm_button_y = 405
+            dnd_confirm_button_y = 425
             version_label_x = 8
-            version_label_y = 405
+            version_label_y = 425
 
         select_window.geometry(window_dims)
-        file_and_folder_button_y = 70
-        dnd_label_y = 100
+        file_and_folder_label_y = 70
+        file_and_folder_button_y = file_and_folder_label_y + 25
+        dnd_label_y = file_and_folder_button_y + 35
 
         def set_prepended_csv_title():
             self.app.csv_file_name_prefix = prepend_title_box.get("1.0", tk.END)
@@ -126,6 +127,12 @@ class HoldingVerificationUi:
         canvas = tk.Canvas(select_window, width=content_width, height=1)
         canvas.place(x=0, y=59)
         canvas.create_line(0, 0, content_width, 200, fill=line_colour, width=content_width, dash=5)
+
+        file_and_folder_label = tk.Label(
+            select_window,
+            text="Select a file(s)/folder(s) in order to confirm that they are in database:"
+        )
+        file_and_folder_label.place(x=13, y=file_and_folder_label_y)
 
         select_file_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
@@ -187,7 +194,7 @@ class HoldingVerificationUi:
 
         list_box.dnd_bind('<<Drop>>', list_dropped_items_callback)
         dnd_label.place(x=dnd_label_x, y=dnd_label_y)
-        list_box.place(x=10, y=140)
+        list_box.place(x=10, y=160)
 
         confirm_dropped_items_button = tk.Button(
             select_window, text="Confirm dropped items", command=get_items_and_run_verification_callback
