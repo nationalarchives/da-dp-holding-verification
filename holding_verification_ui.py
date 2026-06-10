@@ -23,6 +23,7 @@ class HoldingVerificationUi:
         ).strip().lower()
 
     def run_verification(self, item_paths, selected_items):
+        self.app.csv_file_name_prefix = self.app.csv_file_name_prefix.strip().replace(" ", "_")
         paths_as_string = ",\n  ".join(item_paths)
         paths_as_list = f"\n  {paths_as_string}" if len(paths_as_string) > 1 else paths_as_string
         print(f"""\n{yellow("You've selected")}: {paths_as_list}\n\t""")
@@ -48,32 +49,39 @@ class HoldingVerificationUi:
         windows_os = "win32"  # Windows 64-bit also falls under "win32"
 
         if platform == windows_os:
-            window_dims = "565x490"
+            content_width = 560
+            window_dims = "565x510"
+            box_bg_colour = "white"
+            box_text_colour = "black"
+            line_colour = "gray"
             button_text_colour = "white"
             file_button_x = 180
             folder_button_x = 300
             dnd_label_x = 130
-            dnd_bg_colour = "white"
+            dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 419
-            dnd_confirm_button_y = 455
+            version_label_y = dnd_confirm_button_y = 475
             version_label_x = 8
-            version_label_y = 455
 
         else:
-            window_dims = "500x450"
+            content_width = 495
+            window_dims = f"500x470"
+            box_bg_colour = "grey"
+            box_text_colour = "white"
+            line_colour = "white"
             button_text_colour = "black"
             file_button_x = 130
             folder_button_x = 250
             dnd_label_x = 80
-            dnd_bg_colour = "grey"
+            dnd_bg_colour = box_bg_colour
             dnd_confirm_button_x = 319
-            dnd_confirm_button_y = 405
+            version_label_y = dnd_confirm_button_y = 425
             version_label_x = 8
-            version_label_y = 405
 
         select_window.geometry(window_dims)
-        file_and_folder_button_y = 50
-        dnd_label_y = 100
+
+        def set_prepended_csv_title():
+            self.app.csv_file_name_prefix = prepend_title_box.get("1.0", tk.END)
 
         def clear_list_box():
             nonlocal confirmed_dropped_items
@@ -89,6 +97,7 @@ class HoldingVerificationUi:
             item_path = askopenfilenames(parent=select_window, initialdir="", title='Select File(s)')
             if item_path != "":
                 selected_items["are_directories"] = False
+                set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
 
         def folder_callback() -> None:
@@ -100,7 +109,30 @@ class HoldingVerificationUi:
 
             if item_path != ("",):
                 selected_items["are_directories"] = True
+                set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
+
+        prepend_title_label_y = 5
+        prepend_title_label = tk.Label(select_window, text="Title to be prepended to the CSV results' file name:")
+        prepend_title_label.place(x=9, y=prepend_title_label_y)
+
+        prepend_title_box = tk.Text(select_window, height=1.3, width=37, fg=box_text_colour, bg=box_bg_colour)
+        title_box_y = prepend_title_label_y + 25
+        prepend_title_box.place(x=13, y=title_box_y)
+        csv_name_text = tk.Label(select_window, text="_INGESTED_FILES_in_{folder}.csv")
+        csv_name_text.place(x=276, y=title_box_y)
+        canvas = tk.Canvas(select_window, width=content_width, height=1)
+        canvas.place(x=0, y=59)
+        canvas.create_line(0, 0, content_width, 200, fill=line_colour, width=content_width, dash=5)
+
+        file_and_folder_label_y = 70
+        file_and_folder_button_y = file_and_folder_label_y + 25
+
+        file_and_folder_label = tk.Label(
+            select_window,
+            text="Select a file(s)/folder(s) in order to confirm that they are in database:"
+        )
+        file_and_folder_label.place(x=13, y=file_and_folder_label_y)
 
         select_file_button = tk.Button(select_window, bg="DodgerBlue", fg=button_text_colour, text="Select File(s)",
                                        command=file_callback)
@@ -123,6 +155,7 @@ class HoldingVerificationUi:
             selected_items["are_directories"] = path.is_dir()
 
             if item_path != ("",):  # shouldn't be possible as button is disabled until an item is dropped
+                set_prepended_csv_title()
                 self.run_verification(item_path, selected_items)
 
         def list_dropped_items_callback(drop_event: TkinterDnD.DnDEvent):
@@ -160,8 +193,9 @@ class HoldingVerificationUi:
             confirm_dropped_items_button["state"] = "active"
 
         list_box.dnd_bind('<<Drop>>', list_dropped_items_callback)
+        dnd_label_y = file_and_folder_button_y + 35
         dnd_label.place(x=dnd_label_x, y=dnd_label_y)
-        list_box.place(x=10, y=140)
+        list_box.place(x=10, y=160)
 
         confirm_dropped_items_button = tk.Button(
             select_window, text="Confirm dropped items", command=get_items_and_run_verification_callback
@@ -181,13 +215,17 @@ class HoldingVerificationUi:
         select_window.update_idletasks()  # Forces the window to close
 
     def cli_input(self):
+        enter = yellow("Enter")
         path_types = {"f": "file", "d": "directory"}
         selected_items = {}
+        self.app.csv_file_name_prefix = input(
+            f"Add a title to be prepended to the CSV result's file name then '{enter}' or just press '{enter}' to skip: "
+        )
         while True:
-            file_or_dir = input("Would you like to look up a single file or directory? [f/d]: ").lower()
+            file_or_dir = input("\nWould you like to look up a single file or directory? [f/d]: ").lower()
             if file_or_dir in path_types:
                 path_type = path_types[file_or_dir]
-                path_string = (input(f"Add the full {path_type} path here and press '{yellow("Enter")}': ")
+                path_string = (input(f"Add the full {path_type} path here and press '{enter}': ")
                                .strip()
                                .removeprefix('"')
                                .removesuffix('"')

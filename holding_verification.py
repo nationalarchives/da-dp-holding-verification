@@ -32,10 +32,8 @@ def main():
     enter = yellow("Enter")
 
     print(f"Welcome to CheckMate v{default_config["APP_VERSION"]}!\n")
-    csv_file_name_prefix = input(
-        f"Add a title to be prepended to the CSV result's file name then '{enter}' or just press '{enter}' to skip: "
-    ).strip().replace(" ", "_")
-    app_core = HoldingVerificationCore(db_function, table_name, csv_file_name_prefix)
+
+    app_core = HoldingVerificationCore(db_function, table_name)
     ui = HoldingVerificationUi(app_core)
     cli_or_gui = ui.prompt_use_gui()
 
